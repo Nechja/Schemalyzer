@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-schemar
+schemalyzer
 
 # Test binary, built with `go test -c`
 *.test
@@ -36,13 +36,14 @@ Thumbs.db
 *.dot
 *.puml
 *.md
-\!README.md
-\!go.mod
-\!go.sum
+!README.md
+!CHANGELOG.md
+!go.mod
+!go.sum
 
 # Documentation output
 /docs/
-\!/docs/.gitkeep
+!/docs/.gitkeep
 
 # Build artifacts
 dist/
