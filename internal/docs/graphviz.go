@@ -36,7 +36,7 @@ func (g *GraphVizGenerator) Generate(schema *models.Schema) (string, error) {
 	sb.WriteString("  edge [fontname=\"Arial\", fontsize=10];\n\n")
 	
 	// Title
-	sb.WriteString(fmt.Sprintf("  labelloc=\"t\";\n"))
+	sb.WriteString("  labelloc=\"t\";\n")
 	sb.WriteString(fmt.Sprintf("  label=\"%s Database Schema\";\n", schema.Name))
 	sb.WriteString("  fontsize=16;\n\n")
 	

@@ -21,10 +21,10 @@ func init() {
 	exportCmd.Flags().StringVar(&sourceConn, "conn", "", "Database connection string")
 	exportCmd.Flags().StringVar(&sourceSchema, "schema", "", "Schema name to export")
 	exportCmd.Flags().StringVar(&outputFile, "output", "", "Output file path (required)")
-	exportCmd.MarkFlagRequired("type")
-	exportCmd.MarkFlagRequired("conn")
-	exportCmd.MarkFlagRequired("schema")
-	exportCmd.MarkFlagRequired("output")
+	_ = exportCmd.MarkFlagRequired("type")
+	_ = exportCmd.MarkFlagRequired("conn")
+	_ = exportCmd.MarkFlagRequired("schema")
+	_ = exportCmd.MarkFlagRequired("output")
 }
 
 func runExport(cmd *cobra.Command, args []string) error {

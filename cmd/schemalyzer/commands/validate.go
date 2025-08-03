@@ -31,10 +31,10 @@ func init() {
 	validateCmd.Flags().StringVar(&goldenFile, "golden", "", "Golden schema file (JSON or YAML)")
 	validateCmd.Flags().BoolVar(&pipelineMode, "pipeline", false, "Pipeline mode: minimal output, only exit codes")
 	validateCmd.Flags().StringSliceVar(&ignorePatterns, "ignore", []string{}, "Ignore patterns (e.g., 'table:temp_*', 'constraint:SYS_*', '*_audit')")
-	validateCmd.MarkFlagRequired("type")
-	validateCmd.MarkFlagRequired("conn")
-	validateCmd.MarkFlagRequired("schema")
-	validateCmd.MarkFlagRequired("golden")
+	_ = validateCmd.MarkFlagRequired("type")
+	_ = validateCmd.MarkFlagRequired("conn")
+	_ = validateCmd.MarkFlagRequired("schema")
+	_ = validateCmd.MarkFlagRequired("golden")
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {

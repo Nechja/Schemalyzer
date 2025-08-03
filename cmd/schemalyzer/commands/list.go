@@ -17,8 +17,8 @@ var listCmd = &cobra.Command{
 func init() {
 	listCmd.Flags().StringVar(&sourceType, "type", "", "Database type (postgresql, mysql, oracle)")
 	listCmd.Flags().StringVar(&sourceConn, "conn", "", "Database connection string")
-	listCmd.MarkFlagRequired("type")
-	listCmd.MarkFlagRequired("conn")
+	_ = listCmd.MarkFlagRequired("type")
+	_ = listCmd.MarkFlagRequired("conn")
 }
 
 func runList(cmd *cobra.Command, args []string) error {

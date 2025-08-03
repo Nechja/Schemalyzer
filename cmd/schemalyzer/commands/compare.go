@@ -41,12 +41,12 @@ func init() {
 	compareCmd.Flags().StringVar(&outputFile, "output", "", "Output file path (default: stdout)")
 	compareCmd.Flags().StringSliceVar(&ignorePatterns, "ignore", []string{}, "Ignore patterns (e.g., 'table:temp_*', 'constraint:SYS_*', '*_audit')")
 	
-	compareCmd.MarkFlagRequired("source-type")
-	compareCmd.MarkFlagRequired("source-conn")
-	compareCmd.MarkFlagRequired("source-schema")
-	compareCmd.MarkFlagRequired("target-type")
-	compareCmd.MarkFlagRequired("target-conn")
-	compareCmd.MarkFlagRequired("target-schema")
+	_ = compareCmd.MarkFlagRequired("source-type")
+	_ = compareCmd.MarkFlagRequired("source-conn")
+	_ = compareCmd.MarkFlagRequired("source-schema")
+	_ = compareCmd.MarkFlagRequired("target-type")
+	_ = compareCmd.MarkFlagRequired("target-conn")
+	_ = compareCmd.MarkFlagRequired("target-schema")
 }
 
 func runCompare(cmd *cobra.Command, args []string) error {

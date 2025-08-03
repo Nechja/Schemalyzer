@@ -26,10 +26,10 @@ func init() {
 	documentCmd.Flags().StringVar(&sourceSchema, "schema", "", "Schema name to document")
 	documentCmd.Flags().StringVar(&docFormat, "format", "markdown", "Documentation format (markdown, plantuml, mermaid, graphviz, d2)")
 	documentCmd.Flags().StringVar(&outputFile, "output", "", "Output file path (required)")
-	documentCmd.MarkFlagRequired("type")
-	documentCmd.MarkFlagRequired("conn")
-	documentCmd.MarkFlagRequired("schema")
-	documentCmd.MarkFlagRequired("output")
+	_ = documentCmd.MarkFlagRequired("type")
+	_ = documentCmd.MarkFlagRequired("conn")
+	_ = documentCmd.MarkFlagRequired("schema")
+	_ = documentCmd.MarkFlagRequired("output")
 }
 
 func runDocument(cmd *cobra.Command, args []string) error {
