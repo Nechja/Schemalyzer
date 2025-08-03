@@ -15,9 +15,9 @@ cd schemalyzer
 go build -o schemalyzer cmd/schemalyzer/main.go
 ```
 
-### Download Binary (Coming Soon)
+### Download Binary
 
-Pre-built binaries will be available from the [releases page](https://github.com/nechja/schemalyzer/releases) after the first release.
+Pre-built binaries can be found here. [releases page](https://github.com/nechja/schemalyzer/releases) 
 
 Once available, you can download and install:
 ```bash
