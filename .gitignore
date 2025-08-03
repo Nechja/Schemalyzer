@@ -41,8 +41,8 @@ Thumbs.db
 \!go.sum
 
 # Documentation output
-docs/
-\!docs/.gitkeep
+/docs/
+\!/docs/.gitkeep
 
 # Build artifacts
 dist/
