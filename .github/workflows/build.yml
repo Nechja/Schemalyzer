@@ -98,14 +98,14 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         CGO_ENABLED: 0
       run: |
-        output="schemar-${{ matrix.goos }}-${{ matrix.goarch }}"
+        output="schemalyzer-${{ matrix.goos }}-${{ matrix.goarch }}"
         if [ "${{ matrix.goos }}" = "windows" ]; then
           output="${output}.exe"
         fi
-        go build -ldflags="-s -w" -o "$output" cmd/schemar/main.go
+        go build -ldflags="-s -w" -o "$output" cmd/schemalyzer/main.go
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: schemar-${{ matrix.goos }}-${{ matrix.goarch }}
-        path: schemar-*
+        name: schemalyzer-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: schemalyzer-*
