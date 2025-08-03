@@ -1,24 +1,11 @@
 # Schemalyzer
 
-[![Release](https://img.shields.io/github/v/release/nechja/schemalyzer)](https://github.com/nechja/schemalyzer/releases)
+[![Build and Test](https://github.com/nechja/schemalyzer/actions/workflows/build.yml/badge.svg)](https://github.com/nechja/schemalyzer/actions/workflows/build.yml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
 Schemalyzer is a database schema comparison and documentation tool supporting PostgreSQL, MySQL, and Oracle. It enables cross-database schema comparison, generates ERD diagrams in formats such as PlantUML, GraphViz, Mermaid, and D2, and is optimized for performance with parallel schema reading and connection pooling. Designed for CI/CD pipelines, it provides exit codes and minimal output modes for integration, allows flexible filtering to exclude system or temporary objects, supports schema export and import in YAML or JSON for version control, and operates in read-only mode for safety in production environments.
 
 ## Installation
-
-### Download Binary
-
-Download the latest binary for your platform from the [releases page](https://github.com/nechja/schemalyzer/releases).
-
-```bash
-# Linux/macOS
-chmod +x schemalyzer-linux-amd64
-sudo mv schemalyzer-linux-amd64 /usr/local/bin/schemalyzer
-
-# Windows
-# Add schemalyzer-windows-amd64.exe to your PATH
-```
 
 ### Build from Source
 
@@ -26,6 +13,20 @@ sudo mv schemalyzer-linux-amd64 /usr/local/bin/schemalyzer
 git clone https://github.com/nechja/schemalyzer.git
 cd schemalyzer
 go build -o schemalyzer cmd/schemalyzer/main.go
+```
+
+### Download Binary (Coming Soon)
+
+Pre-built binaries will be available from the [releases page](https://github.com/nechja/schemalyzer/releases) after the first release.
+
+Once available, you can download and install:
+```bash
+# Linux/macOS
+chmod +x schemalyzer-linux-amd64
+sudo mv schemalyzer-linux-amd64 /usr/local/bin/schemalyzer
+
+# Windows
+# Add schemalyzer-windows-amd64.exe to your PATH
 ```
 
 ## Quick Start
