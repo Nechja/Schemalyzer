@@ -21,6 +21,7 @@ var (
 	outputFormat string
 	outputFile   string
 	ignorePatterns []string
+	tablesOnly   bool
 )
 
 var compareCmd = &cobra.Command{
@@ -40,6 +41,7 @@ func init() {
 	compareCmd.Flags().StringVar(&outputFormat, "format", "text", "Output format (json, yaml, text, summary)")
 	compareCmd.Flags().StringVar(&outputFile, "output", "", "Output file path (default: stdout)")
 	compareCmd.Flags().StringSliceVar(&ignorePatterns, "ignore", []string{}, "Ignore patterns (e.g., 'table:temp_*', 'constraint:SYS_*', '*_audit')")
+	compareCmd.Flags().BoolVar(&tablesOnly, "tables-only", false, "Compare only tables and their structure (no procedures, functions, triggers)")
 	
 	_ = compareCmd.MarkFlagRequired("source-type")
 	_ = compareCmd.MarkFlagRequired("source-conn")
@@ -88,6 +90,12 @@ func runCompare(cmd *cobra.Command, args []string) error {
 	targetSchemaData, err := targetReader.GetSchema(ctx, targetSchema)
 	if err != nil {
 		return fmt.Errorf("failed to read target schema: %w", err)
+	}
+	
+	// Filter schemas if --tables-only is set
+	if tablesOnly {
+		sourceSchemaData = filterTablesOnly(sourceSchemaData)
+		targetSchemaData = filterTablesOnly(targetSchemaData)
 	}
 	
 	// Compare schemas

@@ -26,6 +26,7 @@ func init() {
 	documentCmd.Flags().StringVar(&sourceSchema, "schema", "", "Schema name to document")
 	documentCmd.Flags().StringVar(&docFormat, "format", "markdown", "Documentation format (markdown, plantuml, mermaid, graphviz, d2)")
 	documentCmd.Flags().StringVar(&outputFile, "output", "", "Output file path (required)")
+	documentCmd.Flags().BoolVar(&tablesOnly, "tables-only", false, "Document only tables and their structure (no procedures, functions, triggers)")
 	_ = documentCmd.MarkFlagRequired("type")
 	_ = documentCmd.MarkFlagRequired("conn")
 	_ = documentCmd.MarkFlagRequired("schema")
@@ -52,6 +53,11 @@ func runDocument(cmd *cobra.Command, args []string) error {
 	schemaData, err := reader.GetSchema(ctx, sourceSchema)
 	if err != nil {
 		return fmt.Errorf("failed to read schema: %w", err)
+	}
+	
+	// Filter schema if --tables-only is set
+	if tablesOnly {
+		schemaData = filterTablesOnly(schemaData)
 	}
 	
 	// Generate documentation

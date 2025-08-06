@@ -22,3 +22,19 @@ func createReader(dbType string) (database.SchemaReader, error) {
 		return nil, fmt.Errorf("unsupported database type: %s", dbType)
 	}
 }
+
+// filterTablesOnly returns a copy of the schema with only tables and views
+func filterTablesOnly(schema *models.Schema) *models.Schema {
+	filtered := &models.Schema{
+		Name:         schema.Name,
+		DatabaseType: schema.DatabaseType,
+		Tables:       schema.Tables,
+		Views:        schema.Views,
+		// Exclude these when --tables-only is set:
+		Sequences:  []models.Sequence{},
+		Functions:  []models.Function{},
+		Procedures: []models.Procedure{},
+		Triggers:   []models.Trigger{},
+	}
+	return filtered
+}

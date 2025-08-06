@@ -21,6 +21,7 @@ func init() {
 	exportCmd.Flags().StringVar(&sourceConn, "conn", "", "Database connection string")
 	exportCmd.Flags().StringVar(&sourceSchema, "schema", "", "Schema name to export")
 	exportCmd.Flags().StringVar(&outputFile, "output", "", "Output file path (required)")
+	exportCmd.Flags().BoolVar(&tablesOnly, "tables-only", false, "Export only tables and their structure (no procedures, functions, triggers)")
 	_ = exportCmd.MarkFlagRequired("type")
 	_ = exportCmd.MarkFlagRequired("conn")
 	_ = exportCmd.MarkFlagRequired("schema")
@@ -47,6 +48,11 @@ func runExport(cmd *cobra.Command, args []string) error {
 	schemaData, err := reader.GetSchema(ctx, sourceSchema)
 	if err != nil {
 		return fmt.Errorf("failed to read schema: %w", err)
+	}
+	
+	// Filter schema if --tables-only is set
+	if tablesOnly {
+		schemaData = filterTablesOnly(schemaData)
 	}
 	
 	// Save to file
