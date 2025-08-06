@@ -121,6 +121,7 @@ Flags:
   --format string          Output format (json, yaml, text, summary) (default "text")
   --output string          Output file path (default: stdout)
   --ignore strings         Ignore patterns (e.g., 'table:temp_*', 'constraint:SYS_*')
+  --tables-only            Compare only tables and their structure (no procedures, functions, triggers)
 ```
 
 ### `validate` - Validate schema against a golden file
@@ -149,6 +150,7 @@ Flags:
   --conn string      Database connection string
   --schema string    Schema name to export
   --output string    Output file path (required)
+  --tables-only      Export only tables and their structure (no procedures, functions, triggers)
 ```
 
 ### `document` - Generate visual documentation
@@ -162,6 +164,7 @@ Flags:
   --schema string    Schema name to document
   --format string    Documentation format (markdown, plantuml, mermaid, graphviz, d2)
   --output string    Output file path (required)
+  --tables-only      Document only tables and their structure (no procedures, functions, triggers)
 ```
 
 ### `list` - List available schemas
@@ -196,6 +199,44 @@ Pattern format: `[object_type:]pattern`
 
 Object types: `table`, `column`, `constraint`, `index`, `view`, `sequence`, `procedure`, `function`, `trigger`, or `*` for all
 
+## Tables Only Mode
+
+The `--tables-only` flag allows you to focus exclusively on the core data schema, excluding stored procedures, functions, triggers, and sequences. This is useful when:
+
+- You only care about data structure changes
+- Comparing schemas across different database vendors with incompatible procedural code
+- Generating cleaner ERD diagrams
+- Creating minimal schema documentation
+
+```bash
+# Export only tables and views
+schemalyzer export \
+  --type postgresql \
+  --conn "postgres://user:pass@localhost/db" \
+  --schema public \
+  --output schema.yaml \
+  --tables-only
+
+# Compare only table structures
+schemalyzer compare \
+  --source-type postgresql \
+  --source-conn "postgres://user:pass@localhost/prod" \
+  --source-schema public \
+  --target-type mysql \
+  --target-conn "user:pass@tcp(localhost:3306)/dev" \
+  --target-schema dev \
+  --tables-only
+
+# Generate ERD with only tables
+schemalyzer document \
+  --type oracle \
+  --conn "oracle://user:pass@localhost:1521/XE" \
+  --schema MYSCHEMA \
+  --format graphviz \
+  --output tables.dot \
+  --tables-only
+```
+
 ## Output Formats
 
 ### Comparison Formats
@@ -210,8 +251,31 @@ Object types: `table`, `column`, `constraint`, `index`, `view`, `sequence`, `pro
 - **markdown** - Comprehensive documentation with tables
 - **plantuml** - PlantUML ERD diagrams
 - **mermaid** - Mermaid diagrams (GitHub/GitLab native)
-- **graphviz** - DOT format for GraphViz
+- **graphviz** - DOT format for GraphViz (requires `graphviz` package)
 - **d2** - Modern D2 diagramming language
+
+#### GraphViz Example
+
+```bash
+# Generate GraphViz ERD
+schemalyzer document \
+  --type postgresql \
+  --conn "postgres://user:pass@localhost/db" \
+  --schema public \
+  --format graphviz \
+  --output schema.dot
+
+# Convert to PNG (requires graphviz installed)
+dot -Tpng schema.dot -o schema.png
+
+# Convert to SVG
+dot -Tsvg schema.dot -o schema.svg
+```
+
+To install GraphViz:
+- Ubuntu/Debian: `sudo apt-get install graphviz`
+- macOS: `brew install graphviz`
+- Windows: Download from [graphviz.org](https://graphviz.org/download/)
 
 ## CI/CD Integration
 
