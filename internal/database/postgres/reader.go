@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/nechja/schemalyzer/pkg/models"
 )
 
@@ -366,7 +366,7 @@ func (r *PostgresReader) getIndexes(ctx context.Context, schemaName, tableName s
 		var index models.Index
 		var columnNames []string
 		
-		if err := rows.Scan(&index.Name, &index.IsUnique, &index.Type, &columnNames); err != nil {
+		if err := rows.Scan(&index.Name, &index.IsUnique, &index.Type, pq.Array(&columnNames)); err != nil {
 			return nil, err
 		}
 		
