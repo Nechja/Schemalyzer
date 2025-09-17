@@ -106,6 +106,96 @@ oracle://username:password@host:port/service_name
 
 ## Commands
 
+### `fingerprint` - Generate a schema fingerprint
+
+Generate a SHA256 hash of a database schema for quick comparison and change detection.
+
+```bash
+schemalyzer fingerprint [flags]
+
+Flags:
+  --type string     Database type (postgresql, mysql, oracle)
+  --conn string     Database connection string
+  --schema string   Schema name
+  --verbose         Show detailed information about what's included
+  --json            Output in JSON format with metadata
+  --tables-only     Include only tables in the fingerprint
+```
+
+#### Examples
+
+```bash
+# Generate a simple fingerprint
+schemalyzer fingerprint \
+  --type postgresql \
+  --conn "postgres://user:pass@localhost/db" \
+  --schema public
+
+# Output: abc123def456...
+
+# Verbose output with statistics
+schemalyzer fingerprint \
+  --type mysql \
+  --conn "user:pass@tcp(localhost:3306)/database" \
+  --schema myschema \
+  --verbose
+
+# JSON output with metadata
+schemalyzer fingerprint \
+  --type oracle \
+  --conn "oracle://user:pass@localhost:1521/XE" \
+  --schema MYSCHEMA \
+  --json
+```
+
+### `compare-fingerprints` - Quick schema comparison
+
+Compare two schemas by their fingerprints for instant change detection.
+
+```bash
+schemalyzer compare-fingerprints [flags]
+
+Flags:
+  --source-hash string      Pre-computed source fingerprint
+  --target-hash string      Pre-computed target fingerprint
+  --source-type string      Source database type
+  --source-conn string      Source database connection
+  --source-schema string    Source schema name
+  --target-type string      Target database type
+  --target-conn string      Target database connection
+  --target-schema string    Target schema name
+  --json                    Output in JSON format
+  --tables-only             Include only tables in fingerprints
+```
+
+#### Examples
+
+```bash
+# Compare using pre-computed hashes
+schemalyzer compare-fingerprints \
+  --source-hash "abc123..." \
+  --target-hash "def456..."
+
+# Generate and compare in one command
+schemalyzer compare-fingerprints \
+  --source-type postgresql \
+  --source-conn "$PROD_DB" \
+  --source-schema public \
+  --target-type postgresql \
+  --target-conn "$DEV_DB" \
+  --target-schema public
+
+# CI/CD pipeline usage
+hash1=$(schemalyzer fingerprint --type postgresql --conn "$DB1" --schema public)
+hash2=$(schemalyzer fingerprint --type postgresql --conn "$DB2" --schema public)
+if [ "$hash1" = "$hash2" ]; then
+  echo "Schemas match!"
+else
+  echo "Schemas differ - running detailed comparison..."
+  schemalyzer compare --source-conn "$DB1" --target-conn "$DB2" ...
+fi
+```
+
 ### `compare` - Compare two database schemas
 
 ```bash

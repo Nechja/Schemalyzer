@@ -28,4 +28,6 @@ func init() {
 	RootCmd.AddCommand(exportCmd)
 	RootCmd.AddCommand(validateCmd)
 	RootCmd.AddCommand(documentCmd)
+	RootCmd.AddCommand(fingerprintCmd)
+	RootCmd.AddCommand(compareFingerprintsCmd)
 }
