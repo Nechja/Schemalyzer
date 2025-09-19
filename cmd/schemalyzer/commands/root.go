@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	
 	"github.com/spf13/cobra"
@@ -19,15 +18,10 @@ func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		// Check if it's an ExitError with a specific exit code
 		if exitErr, ok := err.(*ExitError); ok {
-			// For ExitError with a message, print it
-			if exitErr.Message != "" {
-				fmt.Fprintf(os.Stderr, "Error: %s\n", exitErr.Message)
-			}
 			// Exit with the specified code
 			os.Exit(exitErr.Code)
 		}
-		// For other errors, print and exit with 1
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		// For other errors, exit with 1
 		os.Exit(1)
 	}
 }

@@ -114,8 +114,8 @@ func runCompareFingerprints(cmd *cobra.Command, args []string) error {
 	}
 	
 	if !match {
-		// Return silent error - we've already printed the status
-		return NewExitError(ExitCodeMismatch, "")
+		// Return error to trigger exit code 2
+		return NewExitError(ExitCodeMismatch, "schemas do not match")
 	}
 	
 	return nil
