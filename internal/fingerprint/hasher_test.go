@@ -231,6 +231,72 @@ func TestFingerprintWithAllObjectTypes(t *testing.T) {
 	}
 }
 
+func TestFingerprintIndexColumnOrderIndependence(t *testing.T) {
+	hasher := NewHasher()
+	
+	schema1 := &models.Schema{
+		Name: "test",
+		Tables: []models.Table{
+			{
+				Name: "users",
+				Indexes: []models.Index{
+					{
+						Name:     "idx_user_data",
+						Columns:  []string{"email", "username", "created_at"},
+						IsUnique: true,
+					},
+				},
+			},
+		},
+		Indexes: []models.Index{
+			{
+				Name:      "global_idx",
+				TableName: "users", 
+				Columns:   []string{"id", "status", "type"},
+				IsUnique:  false,
+			},
+		},
+	}
+	
+	schema2 := &models.Schema{
+		Name: "test",
+		Tables: []models.Table{
+			{
+				Name: "users",
+				Indexes: []models.Index{
+					{
+						Name:     "idx_user_data",
+						Columns:  []string{"created_at", "email", "username"}, // Different order
+						IsUnique: true,
+					},
+				},
+			},
+		},
+		Indexes: []models.Index{
+			{
+				Name:      "global_idx",
+				TableName: "users",
+				Columns:   []string{"type", "id", "status"}, // Different order
+				IsUnique:  false,
+			},
+		},
+	}
+	
+	hash1, err := hasher.GenerateFingerprint(schema1)
+	if err != nil {
+		t.Fatalf("Failed to generate fingerprint for schema1: %v", err)
+	}
+	
+	hash2, err := hasher.GenerateFingerprint(schema2)
+	if err != nil {
+		t.Fatalf("Failed to generate fingerprint for schema2: %v", err)
+	}
+	
+	if hash1 != hash2 {
+		t.Error("Indexes with different column order should produce same fingerprint")
+	}
+}
+
 func TestFingerprintParameterOrderIndependence(t *testing.T) {
 	hasher := NewHasher()
 	

@@ -154,10 +154,15 @@ func (h *Hasher) normalizeTableIndexes(indexes []models.Index) []map[string]inte
 	
 	var result []map[string]interface{}
 	for _, idx := range indexes {
+		// Sort columns for consistent hashing
+		sortedColumns := make([]string, len(idx.Columns))
+		copy(sortedColumns, idx.Columns)
+		sort.Strings(sortedColumns)
+		
 		normalized := map[string]interface{}{
 			"name":     idx.Name,
 			"unique":   idx.IsUnique,
-			"columns":  idx.Columns,
+			"columns":  sortedColumns,
 		}
 		
 		if idx.Type != "" {
@@ -177,11 +182,16 @@ func (h *Hasher) normalizeIndexes(indexes []models.Index) []map[string]interface
 	
 	var result []map[string]interface{}
 	for _, idx := range indexes {
+		// Sort columns for consistent hashing
+		sortedColumns := make([]string, len(idx.Columns))
+		copy(sortedColumns, idx.Columns)
+		sort.Strings(sortedColumns)
+		
 		normalized := map[string]interface{}{
 			"name":     idx.Name,
 			"table":    idx.TableName,
 			"unique":   idx.IsUnique,
-			"columns":  idx.Columns,
+			"columns":  sortedColumns,
 		}
 		
 		if idx.Type != "" {
