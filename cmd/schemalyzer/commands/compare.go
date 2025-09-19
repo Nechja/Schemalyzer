@@ -135,7 +135,8 @@ func runCompare(cmd *cobra.Command, args []string) error {
 	
 	// Return error with exit code if differences found
 	if len(result.Differences) > 0 {
-		return NewExitError(ExitCodeMismatch, "Schemas have differences")
+		// Return silent error - output has already been displayed
+		return NewExitError(ExitCodeMismatch, "")
 	}
 	
 	return nil
