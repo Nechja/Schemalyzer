@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	
 	"github.com/spf13/cobra"
@@ -17,7 +16,12 @@ to be used in CI/CD pipelines for database change detection.`,
 
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		// Check if it's an ExitError with a specific exit code
+		if exitErr, ok := err.(*ExitError); ok {
+			// Exit with the specified code
+			os.Exit(exitErr.Code)
+		}
+		// For other errors, exit with 1
 		os.Exit(1)
 	}
 }
@@ -28,4 +32,6 @@ func init() {
 	RootCmd.AddCommand(exportCmd)
 	RootCmd.AddCommand(validateCmd)
 	RootCmd.AddCommand(documentCmd)
+	RootCmd.AddCommand(fingerprintCmd)
+	RootCmd.AddCommand(compareFingerprintsCmd)
 }

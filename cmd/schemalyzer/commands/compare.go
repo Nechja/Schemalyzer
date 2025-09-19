@@ -133,9 +133,9 @@ func runCompare(cmd *cobra.Command, args []string) error {
 		fmt.Print(string(outputData))
 	}
 	
-	// Exit with non-zero code if differences found
+	// Return error with exit code if differences found
 	if len(result.Differences) > 0 {
-		os.Exit(2)
+		return NewExitErrorf(ExitCodeMismatch, "found %d differences between schemas", len(result.Differences))
 	}
 	
 	return nil

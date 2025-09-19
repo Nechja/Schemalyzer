@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-schemalyzer
+/schemalyzer
 
 # Test binary, built with `go test -c`
 *.test
@@ -62,3 +62,4 @@ __debug_bin
 *.tmp
 *.temp
 *.log
+docker-compose.test.yml
