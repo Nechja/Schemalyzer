@@ -83,7 +83,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	if pipelineMode {
 		if len(result.Differences) > 0 {
 			fmt.Fprintf(os.Stderr, "FAIL: Schema validation failed - %d differences found\n", len(result.Differences))
-			os.Exit(2)
+			return NewExitError(ExitCodeMismatch, "Schema validation failed")
 		}
 		// Success - no output
 		return nil
@@ -139,7 +139,6 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 	
-	// Exit with code 2 for differences
-	os.Exit(2)
-	return nil
+	// Return error with exit code for differences
+	return NewExitError(ExitCodeMismatch, "Schema validation failed")
 }

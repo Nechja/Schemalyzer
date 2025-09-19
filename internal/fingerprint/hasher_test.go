@@ -230,3 +230,53 @@ func TestFingerprintWithAllObjectTypes(t *testing.T) {
 		t.Errorf("Expected SHA256 hash length of 64, got %d", len(hash))
 	}
 }
+
+func TestFingerprintParameterOrderIndependence(t *testing.T) {
+	hasher := NewHasher()
+	
+	schema1 := &models.Schema{
+		Name: "test",
+		Functions: []models.Function{
+			{
+				Name: "test_func",
+				Parameters: []models.Parameter{
+					{Name: "param_a", DataType: "integer", Direction: models.In},
+					{Name: "param_b", DataType: "varchar", Direction: models.In},
+					{Name: "param_c", DataType: "boolean", Direction: models.Out},
+				},
+				ReturnType: "integer",
+				Body: "BEGIN RETURN 1; END",
+			},
+		},
+	}
+	
+	schema2 := &models.Schema{
+		Name: "test",
+		Functions: []models.Function{
+			{
+				Name: "test_func",
+				Parameters: []models.Parameter{
+					{Name: "param_c", DataType: "boolean", Direction: models.Out}, // Different order
+					{Name: "param_a", DataType: "integer", Direction: models.In},
+					{Name: "param_b", DataType: "varchar", Direction: models.In},
+				},
+				ReturnType: "integer",
+				Body: "BEGIN RETURN 1; END",
+			},
+		},
+	}
+	
+	hash1, err := hasher.GenerateFingerprint(schema1)
+	if err != nil {
+		t.Fatalf("Failed to generate fingerprint for schema1: %v", err)
+	}
+	
+	hash2, err := hasher.GenerateFingerprint(schema2)
+	if err != nil {
+		t.Fatalf("Failed to generate fingerprint for schema2: %v", err)
+	}
+	
+	if hash1 != hash2 {
+		t.Error("Functions with different parameter order should produce same fingerprint")
+	}
+}

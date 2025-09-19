@@ -17,6 +17,13 @@ to be used in CI/CD pipelines for database change detection.`,
 
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
+		// Check if it's an ExitError with a specific exit code
+		if exitErr, ok := err.(*ExitError); ok {
+			// For ExitError, we've already printed output in the command
+			// Just exit with the specified code
+			os.Exit(exitErr.Code)
+		}
+		// For other errors, print and exit with 1
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

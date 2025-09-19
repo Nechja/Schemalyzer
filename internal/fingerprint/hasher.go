@@ -290,6 +290,11 @@ func (h *Hasher) normalizeTriggers(triggers []models.Trigger) []map[string]inter
 }
 
 func (h *Hasher) normalizeParameters(params []models.Parameter) []map[string]interface{} {
+	// Sort parameters by name for consistent hashing
+	sort.Slice(params, func(i, j int) bool {
+		return params[i].Name < params[j].Name
+	})
+	
 	var result []map[string]interface{}
 	for _, p := range params {
 		normalized := map[string]interface{}{

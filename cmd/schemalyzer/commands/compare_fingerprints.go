@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/nechja/schemalyzer/internal/fingerprint"
@@ -115,7 +114,8 @@ func runCompareFingerprints(cmd *cobra.Command, args []string) error {
 	}
 	
 	if !match {
-		os.Exit(2)
+		// Return silent error - we've already printed the status
+		return NewExitError(ExitCodeMismatch, "")
 	}
 	
 	return nil
