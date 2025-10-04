@@ -22,6 +22,10 @@ var (
 	outputFile   string
 	ignorePatterns []string
 	tablesOnly   bool
+	withStats    bool
+	withRowCount bool
+	withSamples  bool
+	sampleSize   int
 )
 
 var compareCmd = &cobra.Command{

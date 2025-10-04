@@ -19,3 +19,8 @@ type SchemaComparer interface {
 type OutputFormatter interface {
 	Format(result *models.ComparisonResult) ([]byte, error)
 }
+
+type StatisticsReader interface {
+	GetTableRowCount(ctx context.Context, schemaName, tableName string) (int64, error)
+	GetColumnSamples(ctx context.Context, schemaName, tableName, columnName string, limit int) ([]string, error)
+}

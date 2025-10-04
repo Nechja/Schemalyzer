@@ -20,6 +20,7 @@ type Schema struct {
 	Procedures   []Procedure
 	Functions    []Function
 	Triggers     []Trigger
+	Stats        *SchemaStats `yaml:"stats,omitempty" json:"stats,omitempty"`
 }
 
 type Table struct {
@@ -29,6 +30,7 @@ type Table struct {
 	Constraints []Constraint
 	Indexes     []Index
 	Comment     string
+	RowCount    *int64 `yaml:"row_count,omitempty" json:"row_count,omitempty"`
 }
 
 type Column struct {
@@ -40,6 +42,7 @@ type Column struct {
 	IsUnique     bool
 	Comment      string
 	Position     int
+	Samples      []string `yaml:"samples,omitempty" json:"samples,omitempty"`
 }
 
 type Constraint struct {
@@ -164,4 +167,12 @@ type ComparisonResult struct {
 	ComparisonTime    time.Time
 	SourceDatabase    string
 	TargetDatabase    string
+}
+
+type SchemaStats struct {
+	TableCount    int       `yaml:"table_count" json:"table_count"`
+	ViewCount     int       `yaml:"view_count" json:"view_count"`
+	TotalColumns  int       `yaml:"total_columns" json:"total_columns"`
+	IndexCount    int       `yaml:"index_count" json:"index_count"`
+	GeneratedAt   time.Time `yaml:"generated_at" json:"generated_at"`
 }
