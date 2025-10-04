@@ -618,3 +618,47 @@ func (r *MySQLReader) Close() error {
 	}
 	return nil
 }
+
+// GetTableRowCount returns the row count for a specific table
+func (r *MySQLReader) GetTableRowCount(ctx context.Context, schemaName, tableName string) (int64, error) {
+	var count int64
+
+	// MySQL uses backticks for identifier quoting
+	query := fmt.Sprintf("SELECT COUNT(*) FROM `%s`.`%s`", schemaName, tableName)
+
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get row count: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetColumnSamples returns sample values for a specific column
+func (r *MySQLReader) GetColumnSamples(ctx context.Context, schemaName, tableName, columnName string, limit int) ([]string, error) {
+	// Build query to get distinct sample values
+	// Convert to CHAR to ensure we can get string representation
+	query := fmt.Sprintf(`
+		SELECT DISTINCT CAST(`+"`%s`"+` AS CHAR)
+		FROM `+"`%s`.`%s`"+`
+		WHERE `+"`%s`"+` IS NOT NULL
+		LIMIT %d
+	`, columnName, schemaName, tableName, columnName, limit)
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get column samples: %w", err)
+	}
+	defer rows.Close()
+
+	var samples []string
+	for rows.Next() {
+		var value string
+		if err := rows.Scan(&value); err != nil {
+			continue // Skip values that can't be converted to string
+		}
+		samples = append(samples, value)
+	}
+
+	return samples, rows.Err()
+}
