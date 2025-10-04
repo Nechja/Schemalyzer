@@ -1,0 +1,256 @@
+@using SchemalyzerVisualizer.Services
+@using SchemalyzerVisualizer.Models
+@using Z.Blazor.Diagrams
+@using Z.Blazor.Diagrams.Components
+@inject SchemaLoaderService SchemaLoader
+@inject VisualizationService Visualizer
+@inject IJSRuntime JS
+
+@if (SchemaLoader.CurrentSchema != null)
+{
+    <div class="schema-visualizer">
+        <div class="toolbar">
+            <h2>@SchemaLoader.CurrentSchema.Name Schema</h2>
+            <div class="toolbar-actions">
+                <button class="btn btn-primary" @onclick="ExportPlantUML">Export PlantUML</button>
+                <button class="btn btn-primary" @onclick="ExportMermaid">Export Mermaid</button>
+                <button class="btn btn-secondary" @onclick="ClearSchema">Clear Schema</button>
+            </div>
+        </div>
+
+        <div class="statistics">
+            <div class="stat-card">
+                <h4>Tables</h4>
+                <p>@SchemaLoader.GetTableCount()</p>
+            </div>
+            <div class="stat-card">
+                <h4>Views</h4>
+                <p>@SchemaLoader.GetViewCount()</p>
+            </div>
+            <div class="stat-card">
+                <h4>Indexes</h4>
+                <p>@SchemaLoader.GetIndexCount()</p>
+            </div>
+            <div class="stat-card">
+                <h4>Total Columns</h4>
+                <p>@SchemaLoader.GetTotalColumnCount()</p>
+            </div>
+        </div>
+
+        @if (_diagram != null)
+        {
+            <div class="diagram-container">
+                <CascadingValue Value="_diagram">
+                    <DiagramCanvas></DiagramCanvas>
+                </CascadingValue>
+            </div>
+        }
+
+        <div class="export-modal @(_showExportModal ? "show" : "")" @onclick="CloseModal">
+            <div class="modal-content" @onclick:stopPropagation="true">
+                <h3>@_exportTitle</h3>
+                <textarea readonly class="export-text" @bind="_exportContent"></textarea>
+                <button class="btn btn-primary" @onclick="CopyToClipboard">Copy to Clipboard</button>
+                <button class="btn btn-secondary" @onclick="CloseModal">Close</button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="no-schema">
+        <p>No schema loaded. Please upload a schema file to visualize.</p>
+    </div>
+}
+
+<style>
+    .schema-visualizer {
+        padding: 20px;
+        background-color: #0d1117;
+        min-height: 100vh;
+        color: #c9d1d9;
+    }
+
+    .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #161b22;
+        border-radius: 8px;
+    }
+
+    .toolbar h2 {
+        margin: 0;
+        color: #58a6ff;
+    }
+
+    .toolbar-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+
+    .btn-primary {
+        background-color: #238636;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #2ea043;
+    }
+
+    .btn-secondary {
+        background-color: #30363d;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+    }
+
+    .btn-secondary:hover {
+        background-color: #484f58;
+        border-color: #6e7681;
+    }
+
+    .statistics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        background-color: #161b22;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid #30363d;
+    }
+
+    .stat-card h4 {
+        margin: 0;
+        font-size: 14px;
+        color: #8b949e;
+    }
+
+    .stat-card p {
+        margin: 10px 0 0 0;
+        font-size: 24px;
+        font-weight: bold;
+        color: #58a6ff;
+    }
+
+    .diagram-container {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        height: 600px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .no-schema {
+        text-align: center;
+        padding: 50px;
+        color: #8b949e;
+    }
+
+    .export-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+    }
+
+    .export-modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background-color: #161b22;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 800px;
+        width: 90%;
+        border: 1px solid #30363d;
+    }
+
+    .export-text {
+        width: 100%;
+        height: 400px;
+        background-color: #0d1117;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        padding: 10px;
+        font-family: monospace;
+        margin: 15px 0;
+        resize: vertical;
+    }
+</style>
+
+@code {
+    private Diagram? _diagram;
+    private bool _showExportModal = false;
+    private string _exportContent = string.Empty;
+    private string _exportTitle = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (SchemaLoader.CurrentSchema != null)
+        {
+            _diagram = Visualizer.CreateDiagram(SchemaLoader.CurrentSchema);
+        }
+    }
+
+    private void ExportPlantUML()
+    {
+        if (SchemaLoader.CurrentSchema != null)
+        {
+            _exportContent = Visualizer.GeneratePlantUml(SchemaLoader.CurrentSchema);
+            _exportTitle = "PlantUML Export";
+            _showExportModal = true;
+        }
+    }
+
+    private void ExportMermaid()
+    {
+        if (SchemaLoader.CurrentSchema != null)
+        {
+            _exportContent = Visualizer.GenerateMermaid(SchemaLoader.CurrentSchema);
+            _exportTitle = "Mermaid Export";
+            _showExportModal = true;
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _exportContent);
+    }
+
+    private void CloseModal()
+    {
+        _showExportModal = false;
+    }
+
+    private void ClearSchema()
+    {
+        SchemaLoader.ClearSchema();
+        _diagram = null;
+        StateHasChanged();
+    }
+}

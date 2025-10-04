@@ -1,0 +1,55 @@
+﻿@page "/"
+@using SchemalyzerVisualizer.Components
+@using SchemalyzerVisualizer.Services
+@inject SchemaLoaderService SchemaLoader
+
+<PageTitle>Schemalyzer Visualizer</PageTitle>
+
+<div class="page-container">
+    <header class="header">
+        <h1>Schemalyzer Schema Visualizer</h1>
+        <p class="subtitle">Visualize and explore database schemas from YAML and JSON files</p>
+    </header>
+
+    @if (SchemaLoader.CurrentSchema == null)
+    {
+        <SchemaUploader OnSchemaLoaded="HandleSchemaLoaded" />
+    }
+    else
+    {
+        <SchemaVisualizer />
+    }
+</div>
+
+<style>
+    .page-container {
+        min-height: 100vh;
+        background-color: #0d1117;
+    }
+
+    .header {
+        text-align: center;
+        padding: 40px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .header h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    .subtitle {
+        margin: 10px 0 0 0;
+        font-size: 1.1rem;
+        opacity: 0.95;
+    }
+</style>
+
+@code {
+    private void HandleSchemaLoaded()
+    {
+        StateHasChanged();
+    }
+}

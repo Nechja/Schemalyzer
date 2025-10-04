@@ -1,0 +1,184 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using SchemalyzerVisualizer.Services
+@inject SchemaLoaderService SchemaLoader
+@inject IJSRuntime JS
+
+<div class="schema-uploader">
+    <div class="upload-area @(_isDragOver ? "drag-over" : "")"
+         @ondragover="HandleDragOver"
+         @ondragover:preventDefault="true"
+         @ondragleave="HandleDragLeave"
+         @ondrop="HandleDrop"
+         @ondrop:preventDefault="true">
+
+        <InputFile @ref="inputFile" OnChange="HandleFileSelection" accept=".yaml,.yml,.json" style="display: none;" />
+
+        <div class="upload-content">
+            <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+
+            <h3>Drop your schema file here</h3>
+            <p>or</p>
+            <button class="upload-button" @onclick="TriggerFileInput">Browse Files</button>
+            <p class="file-types">Supports YAML (.yaml, .yml) and JSON (.json) files</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="error-message">
+            @_errorMessage
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading schema...</p>
+        </div>
+    }
+</div>
+
+<style>
+    .schema-uploader {
+        margin: 20px;
+    }
+
+    .upload-area {
+        border: 2px dashed #4a5568;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        background-color: #1a202c;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .upload-area.drag-over {
+        border-color: #4299e1;
+        background-color: #2d3748;
+    }
+
+    .upload-content {
+        pointer-events: none;
+    }
+
+    .upload-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto;
+        color: #718096;
+    }
+
+    .upload-button {
+        background-color: #4299e1;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        pointer-events: auto;
+        transition: background-color 0.3s;
+    }
+
+    .upload-button:hover {
+        background-color: #3182ce;
+    }
+
+    .file-types {
+        color: #718096;
+        font-size: 0.875rem;
+        margin-top: 10px;
+    }
+
+    .error-message {
+        background-color: #fc8181;
+        color: #742a2a;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    .loading {
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #4299e1;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    private InputFile? inputFile;
+    private bool _isDragOver = false;
+    private bool _isLoading = false;
+    private string _errorMessage = string.Empty;
+
+    [Parameter] public EventCallback OnSchemaLoaded { get; set; }
+
+    private void HandleDragOver(DragEventArgs e)
+    {
+        _isDragOver = true;
+    }
+
+    private void HandleDragLeave()
+    {
+        _isDragOver = false;
+    }
+
+    private async Task HandleDrop(DragEventArgs e)
+    {
+        _isDragOver = false;
+        // Note: File drop via drag and drop requires JavaScript interop
+        // For simplicity, we'll focus on the file input approach
+    }
+
+    private void TriggerFileInput()
+    {
+        inputFile?.Element?.Value.FocusAsync();
+    }
+
+    private async Task HandleFileSelection(InputFileChangeEventArgs e)
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var file = e.File;
+
+            if (file.Size > 10 * 1024 * 1024) // 10MB limit
+            {
+                _errorMessage = "File size must be less than 10MB";
+                return;
+            }
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            await SchemaLoader.LoadFromFileAsync(stream, file.Name);
+
+            await OnSchemaLoaded.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading schema: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}
