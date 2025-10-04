@@ -51,6 +51,9 @@ public class Table
 
     [YamlMember(Alias = "comment")]
     public string Comment { get; set; } = string.Empty;
+
+    [YamlMember(Alias = "row_count")]
+    public long? RowCount { get; set; }
 }
 
 public class Column

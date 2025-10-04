@@ -1,7 +1,5 @@
 @using SchemalyzerVisualizer.Services
 @using SchemalyzerVisualizer.Models
-@using Z.Blazor.Diagrams
-@using Z.Blazor.Diagrams.Components
 @inject SchemaLoaderService SchemaLoader
 @inject VisualizationService Visualizer
 @inject IJSRuntime JS
@@ -37,14 +35,34 @@
             </div>
         </div>
 
-        @if (_diagram != null)
-        {
-            <div class="diagram-container">
-                <CascadingValue Value="_diagram">
-                    <DiagramCanvas></DiagramCanvas>
-                </CascadingValue>
+        <div class="tables-container">
+            <h3>Tables and Relationships</h3>
+            <div class="tables-grid">
+                @foreach (var table in SchemaLoader.CurrentSchema.Tables ?? new List<Table>())
+                {
+                    <div class="table-card">
+                        <h4>@table.Name</h4>
+                        @if (table.RowCount != null)
+                        {
+                            <p class="row-count">@table.RowCount rows</p>
+                        }
+                        <div class="columns-list">
+                            @foreach (var column in table.Columns?.Take(5) ?? new List<Column>())
+                            {
+                                <div class="column-item">
+                                    <span class="column-name">@column.Name</span>
+                                    <span class="column-type">@column.DataType</span>
+                                </div>
+                            }
+                            @if (table.Columns?.Count > 5)
+                            {
+                                <div class="column-item more">... @(table.Columns.Count - 5) more columns</div>
+                            }
+                        </div>
+                    </div>
+                }
             </div>
-        }
+        </div>
 
         <div class="export-modal @(_showExportModal ? "show" : "")" @onclick="CloseModal">
             <div class="modal-content" @onclick:stopPropagation="true">
@@ -148,13 +166,69 @@ else
         color: #58a6ff;
     }
 
-    .diagram-container {
+    .tables-container {
+        margin-top: 20px;
+    }
+
+    .tables-container h3 {
+        color: #58a6ff;
+        margin-bottom: 15px;
+    }
+
+    .tables-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 15px;
+    }
+
+    .table-card {
         background-color: #161b22;
         border: 1px solid #30363d;
         border-radius: 8px;
-        height: 600px;
-        position: relative;
-        overflow: hidden;
+        padding: 15px;
+        transition: border-color 0.3s;
+    }
+
+    .table-card:hover {
+        border-color: #58a6ff;
+    }
+
+    .table-card h4 {
+        margin: 0 0 10px 0;
+        color: #58a6ff;
+    }
+
+    .row-count {
+        color: #8b949e;
+        font-size: 12px;
+        margin: 5px 0;
+    }
+
+    .columns-list {
+        margin-top: 10px;
+    }
+
+    .column-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 0;
+        font-size: 12px;
+        color: #c9d1d9;
+    }
+
+    .column-name {
+        font-weight: 500;
+    }
+
+    .column-type {
+        color: #8b949e;
+        font-style: italic;
+    }
+
+    .column-item.more {
+        color: #8b949e;
+        font-style: italic;
+        margin-top: 5px;
     }
 
     .no-schema {
@@ -204,17 +278,13 @@ else
 </style>
 
 @code {
-    private Diagram? _diagram;
     private bool _showExportModal = false;
     private string _exportContent = string.Empty;
     private string _exportTitle = string.Empty;
 
     protected override void OnInitialized()
     {
-        if (SchemaLoader.CurrentSchema != null)
-        {
-            _diagram = Visualizer.CreateDiagram(SchemaLoader.CurrentSchema);
-        }
+        // Component initialized
     }
 
     private void ExportPlantUML()
@@ -250,7 +320,6 @@ else
     private void ClearSchema()
     {
         SchemaLoader.ClearSchema();
-        _diagram = null;
         StateHasChanged();
     }
 }

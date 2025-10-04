@@ -1,0 +1,57 @@
+name: Deploy Blazor to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'SchemalyzerVisualizer/**'
+      - '.github/workflows/deploy-blazor-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore SchemalyzerVisualizer/SchemalyzerVisualizer.csproj
+
+      - name: Build Blazor WASM
+        run: dotnet publish SchemalyzerVisualizer/SchemalyzerVisualizer.csproj -c Release -o release --nologo
+
+      - name: Update base href
+        run: |
+          sed -i 's/<base href="\/" \/>/<base href="\/Schemalyzer\/SchemalyzerVisualizer\/" \/>/g' release/wwwroot/index.html
+          sed -i 's/<base href="\/" \/>/<base href="\/Schemalyzer\/SchemalyzerVisualizer\/" \/>/g' release/wwwroot/404.html
+
+      - name: Add .nojekyll file
+        run: touch release/wwwroot/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: release/wwwroot
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

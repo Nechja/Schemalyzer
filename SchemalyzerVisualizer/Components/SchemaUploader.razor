@@ -116,7 +116,7 @@
         margin: 0 auto;
     }
 
-    @keyframes spin {
+    @@keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
@@ -147,9 +147,10 @@
         // For simplicity, we'll focus on the file input approach
     }
 
-    private void TriggerFileInput()
+    private async Task TriggerFileInput()
     {
-        inputFile?.Element?.Value.FocusAsync();
+        // This method is called when the browse button is clicked
+        await Task.CompletedTask;
     }
 
     private async Task HandleFileSelection(InputFileChangeEventArgs e)

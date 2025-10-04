@@ -1,93 +1,38 @@
-using Z.Blazor.Diagrams;
-using Z.Blazor.Diagrams.Core.Geometry;
-using Z.Blazor.Diagrams.Core.Models;
 using SchemalyzerVisualizer.Models;
 
 namespace SchemalyzerVisualizer.Services;
 
 public class VisualizationService
 {
-    public Diagram CreateDiagram(Schema schema)
+    public Dictionary<string, List<string>> GetTableRelationships(Schema schema)
     {
-        var diagram = new Diagram();
-        diagram.Options.Zoom.Enabled = true;
-        diagram.Options.Links.EnableSnapping = true;
-        diagram.Options.GridSize = 20;
+        var relationships = new Dictionary<string, List<string>>();
 
-        if (schema.Tables == null || !schema.Tables.Any())
-            return diagram;
+        if (schema.Tables == null)
+            return relationships;
 
-        var tableNodes = new Dictionary<string, NodeModel>();
-        var positions = CalculateNodePositions(schema.Tables.Count);
-
-        // Create nodes for each table
-        for (int i = 0; i < schema.Tables.Count; i++)
-        {
-            var table = schema.Tables[i];
-            var position = positions[i];
-
-            var node = diagram.Nodes.Add(new NodeModel(position)
-            {
-                Title = table.Name
-            });
-
-            // Add ports for foreign key connections
-            node.AddPort(PortAlignment.Top);
-            node.AddPort(PortAlignment.Bottom);
-            node.AddPort(PortAlignment.Left);
-            node.AddPort(PortAlignment.Right);
-
-            tableNodes[table.Name] = node;
-        }
-
-        // Create links for foreign key relationships
         foreach (var table in schema.Tables)
         {
-            if (table.Constraints == null) continue;
+            var relatedTables = new List<string>();
 
-            foreach (var constraint in table.Constraints.Where(c => c.Type == "FOREIGN_KEY"))
+            if (table.Constraints != null)
             {
-                if (string.IsNullOrEmpty(constraint.ReferencedTable)) continue;
-
-                if (tableNodes.TryGetValue(table.Name, out var sourceNode) &&
-                    tableNodes.TryGetValue(constraint.ReferencedTable, out var targetNode))
+                foreach (var constraint in table.Constraints.Where(c => c.Type == "FOREIGN_KEY"))
                 {
-                    var sourcePort = sourceNode.Ports.First();
-                    var targetPort = targetNode.Ports.First();
-
-                    diagram.Links.Add(new LinkModel(sourcePort, targetPort)
+                    if (!string.IsNullOrEmpty(constraint.ReferencedTable))
                     {
-                        Labels = { new LinkLabelModel { Content = constraint.Name } }
-                    });
+                        relatedTables.Add(constraint.ReferencedTable);
+                    }
                 }
+            }
+
+            if (relatedTables.Any())
+            {
+                relationships[table.Name] = relatedTables.Distinct().ToList();
             }
         }
 
-        return diagram;
-    }
-
-    private List<Point> CalculateNodePositions(int nodeCount)
-    {
-        var positions = new List<Point>();
-        var columns = (int)Math.Ceiling(Math.Sqrt(nodeCount));
-        var rows = (int)Math.Ceiling((double)nodeCount / columns);
-
-        const double spacing = 200;
-        const double startX = 50;
-        const double startY = 50;
-
-        for (int i = 0; i < nodeCount; i++)
-        {
-            var col = i % columns;
-            var row = i / columns;
-
-            positions.Add(new Point(
-                startX + col * spacing,
-                startY + row * spacing
-            ));
-        }
-
-        return positions;
+        return relationships;
     }
 
     public string GeneratePlantUml(Schema schema)
@@ -126,7 +71,7 @@ public class VisualizationService
                 {
                     if (!string.IsNullOrEmpty(constraint.ReferencedTable))
                     {
-                        uml.AppendLine($"\"{table.Name}\" }|--|| \"{constraint.ReferencedTable}\" : {constraint.Name}");
+                        uml.AppendLine($"\"{table.Name}\" }}|--|| \"{constraint.ReferencedTable}\" : {constraint.Name}");
                     }
                 }
             }
