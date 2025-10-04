@@ -705,3 +705,54 @@ func (r *OracleReader) Close() error {
 	}
 	return nil
 }
+
+// GetTableRowCount returns the row count for a specific table
+func (r *OracleReader) GetTableRowCount(ctx context.Context, schemaName, tableName string) (int64, error) {
+	var count int64
+
+	// Oracle uses double quotes for identifier quoting
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM "%s"."%s"`,
+		strings.ToUpper(schemaName),
+		strings.ToUpper(tableName))
+
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get row count: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetColumnSamples returns sample values for a specific column
+func (r *OracleReader) GetColumnSamples(ctx context.Context, schemaName, tableName, columnName string, limit int) ([]string, error) {
+	// Build query to get distinct sample values
+	// Use TO_CHAR to convert to string representation
+	// Oracle uses ROWNUM for limiting
+	query := fmt.Sprintf(`
+		SELECT DISTINCT TO_CHAR("%s")
+		FROM "%s"."%s"
+		WHERE "%s" IS NOT NULL
+		AND ROWNUM <= %d
+	`, strings.ToUpper(columnName),
+	   strings.ToUpper(schemaName),
+	   strings.ToUpper(tableName),
+	   strings.ToUpper(columnName),
+	   limit)
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get column samples: %w", err)
+	}
+	defer rows.Close()
+
+	var samples []string
+	for rows.Next() {
+		var value string
+		if err := rows.Scan(&value); err != nil {
+			continue // Skip values that can't be converted to string
+		}
+		samples = append(samples, value)
+	}
+
+	return samples, rows.Err()
+}
