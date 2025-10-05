@@ -323,11 +323,31 @@ func (r *PostgresReader) getConstraints(ctx context.Context, schemaName, tableNa
 		}
 		
 		if columnName.Valid {
-			constraintMap[constraintName].Columns = append(constraintMap[constraintName].Columns, columnName.String)
+			// Check if column already exists to avoid duplicates
+			exists := false
+			for _, col := range constraintMap[constraintName].Columns {
+				if col == columnName.String {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				constraintMap[constraintName].Columns = append(constraintMap[constraintName].Columns, columnName.String)
+			}
 		}
-		
+
 		if constraintMap[constraintName].Type == models.ForeignKey && foreignColumn.Valid {
-			constraintMap[constraintName].ReferencedColumn = append(constraintMap[constraintName].ReferencedColumn, foreignColumn.String)
+			// Check if referenced column already exists to avoid duplicates
+			exists := false
+			for _, col := range constraintMap[constraintName].ReferencedColumn {
+				if col == foreignColumn.String {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				constraintMap[constraintName].ReferencedColumn = append(constraintMap[constraintName].ReferencedColumn, foreignColumn.String)
+			}
 		}
 	}
 	

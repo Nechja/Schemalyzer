@@ -11,18 +11,20 @@
          @ondrop="HandleDrop"
          @ondrop:preventDefault="true">
 
-        <InputFile @ref="inputFile" OnChange="HandleFileSelection" accept=".yaml,.yml,.json" style="display: none;" />
+        <label for="file-input" class="upload-label">
+            <InputFile id="file-input" OnChange="HandleFileSelection" accept=".yaml,.yml,.json" class="hidden-input" />
 
-        <div class="upload-content">
-            <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
+            <div class="upload-content">
+                <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
 
-            <h3>Drop your schema file here</h3>
-            <p>or</p>
-            <button class="upload-button" @onclick="TriggerFileInput">Browse Files</button>
-            <p class="file-types">Supports YAML (.yaml, .yml) and JSON (.json) files</p>
-        </div>
+                <h3>Drop your schema file here</h3>
+                <p>or</p>
+                <span class="upload-button">Browse Files</span>
+                <p class="file-types">Supports YAML (.yaml, .yml) and JSON (.json) files</p>
+            </div>
+        </label>
     </div>
 
     @if (!string.IsNullOrEmpty(_errorMessage))
@@ -53,12 +55,30 @@
         text-align: center;
         background-color: #1a202c;
         transition: all 0.3s ease;
-        cursor: pointer;
     }
 
     .upload-area.drag-over {
         border-color: #4299e1;
         background-color: #2d3748;
+    }
+
+    .upload-label {
+        display: block;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+    }
+
+    .hidden-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0,0,0,0);
+        white-space: nowrap;
+        border: 0;
     }
 
     .upload-content {
@@ -78,12 +98,11 @@
         padding: 10px 20px;
         border: none;
         border-radius: 4px;
-        cursor: pointer;
-        pointer-events: auto;
+        display: inline-block;
         transition: background-color 0.3s;
     }
 
-    .upload-button:hover {
+    .upload-label:hover .upload-button {
         background-color: #3182ce;
     }
 
@@ -123,7 +142,6 @@
 </style>
 
 @code {
-    private InputFile? inputFile;
     private bool _isDragOver = false;
     private bool _isLoading = false;
     private string _errorMessage = string.Empty;
@@ -145,12 +163,6 @@
         _isDragOver = false;
         // Note: File drop via drag and drop requires JavaScript interop
         // For simplicity, we'll focus on the file input approach
-    }
-
-    private async Task TriggerFileInput()
-    {
-        // This method is called when the browse button is clicked
-        await Task.CompletedTask;
     }
 
     private async Task HandleFileSelection(InputFileChangeEventArgs e)

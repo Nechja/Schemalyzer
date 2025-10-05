@@ -350,8 +350,29 @@ func (r *MySQLReader) getConstraints(ctx context.Context, schemaName, tableName 
 			}
 		}
 		
-		fkMap[constraintName].Columns = append(fkMap[constraintName].Columns, columnName)
-		fkMap[constraintName].ReferencedColumn = append(fkMap[constraintName].ReferencedColumn, refColumn)
+		// Check if column already exists to avoid duplicates
+		columnExists := false
+		for _, col := range fkMap[constraintName].Columns {
+			if col == columnName {
+				columnExists = true
+				break
+			}
+		}
+		if !columnExists {
+			fkMap[constraintName].Columns = append(fkMap[constraintName].Columns, columnName)
+		}
+
+		// Check if referenced column already exists to avoid duplicates
+		refColumnExists := false
+		for _, col := range fkMap[constraintName].ReferencedColumn {
+			if col == refColumn {
+				refColumnExists = true
+				break
+			}
+		}
+		if !refColumnExists {
+			fkMap[constraintName].ReferencedColumn = append(fkMap[constraintName].ReferencedColumn, refColumn)
+		}
 	}
 	
 	for _, fk := range fkMap {

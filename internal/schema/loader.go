@@ -88,10 +88,11 @@ func (l *Loader) SaveToJSON(schema *models.Schema, writer io.Writer) error {
 
 func (l *Loader) SaveToYAML(schema *models.Schema, writer io.Writer) error {
 	encoder := yaml.NewEncoder(writer)
-	
+	encoder.SetIndent(2) // Use 2 spaces for indentation
+
 	if err := encoder.Encode(schema); err != nil {
 		return fmt.Errorf("failed to encode YAML: %w", err)
 	}
-	
+
 	return nil
 }
