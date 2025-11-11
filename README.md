@@ -214,6 +214,8 @@ Flags:
   --tables-only            Compare only tables and their structure (no procedures, functions, triggers)
 ```
 
+MySQL-Vergleiche berücksichtigen neben Datentyp, Nullbarkeit und Defaults jetzt auch Auto-Increment-Attribute primärer Schlüsselspalten. Änderungen werden in JSON/YAML-Ausgaben sichtbar und führen zu `Column`-Diffs.
+
 ### `validate` - Validate schema against a golden file
 
 Perfect for CI/CD pipelines. Returns exit code 0 if schemas match, 2 if they differ.

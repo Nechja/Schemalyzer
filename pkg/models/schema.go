@@ -34,15 +34,16 @@ type Table struct {
 }
 
 type Column struct {
-	Name         string
-	DataType     string
-	IsNullable   bool
-	DefaultValue *string
-	IsPrimaryKey bool
-	IsUnique     bool
-	Comment      string
-	Position     int
-	Samples      []string `yaml:"samples,omitempty" json:"samples,omitempty"`
+	Name            string
+	DataType        string
+	IsNullable      bool
+	DefaultValue    *string
+	IsPrimaryKey    bool
+	IsUnique        bool
+	IsAutoIncrement bool `yaml:"auto_increment,omitempty" json:"auto_increment,omitempty"`
+	Comment         string
+	Position        int
+	Samples         []string `yaml:"samples,omitempty" json:"samples,omitempty"`
 }
 
 type Constraint struct {
@@ -57,11 +58,11 @@ type Constraint struct {
 type ConstraintType string
 
 const (
-	PrimaryKey  ConstraintType = "PRIMARY_KEY"
-	ForeignKey  ConstraintType = "FOREIGN_KEY"
-	Unique      ConstraintType = "UNIQUE"
-	Check       ConstraintType = "CHECK"
-	NotNull     ConstraintType = "NOT_NULL"
+	PrimaryKey ConstraintType = "PRIMARY_KEY"
+	ForeignKey ConstraintType = "FOREIGN_KEY"
+	Unique     ConstraintType = "UNIQUE"
+	Check      ConstraintType = "CHECK"
+	NotNull    ConstraintType = "NOT_NULL"
 )
 
 type Index struct {
@@ -80,13 +81,13 @@ type View struct {
 }
 
 type Sequence struct {
-	Schema      string
-	Name        string
-	StartValue  int64
-	Increment   int64
-	MinValue    int64
-	MaxValue    int64
-	IsCyclic    bool
+	Schema       string
+	Name         string
+	StartValue   int64
+	Increment    int64
+	MinValue     int64
+	MaxValue     int64
+	IsCyclic     bool
 	CurrentValue int64
 }
 
@@ -161,18 +162,18 @@ const (
 )
 
 type ComparisonResult struct {
-	SourceSchema      *Schema
-	TargetSchema      *Schema
-	Differences       []Difference
-	ComparisonTime    time.Time
-	SourceDatabase    string
-	TargetDatabase    string
+	SourceSchema   *Schema
+	TargetSchema   *Schema
+	Differences    []Difference
+	ComparisonTime time.Time
+	SourceDatabase string
+	TargetDatabase string
 }
 
 type SchemaStats struct {
-	TableCount    int       `yaml:"table_count" json:"table_count"`
-	ViewCount     int       `yaml:"view_count" json:"view_count"`
-	TotalColumns  int       `yaml:"total_columns" json:"total_columns"`
-	IndexCount    int       `yaml:"index_count" json:"index_count"`
-	GeneratedAt   time.Time `yaml:"generated_at" json:"generated_at"`
+	TableCount   int       `yaml:"table_count" json:"table_count"`
+	ViewCount    int       `yaml:"view_count" json:"view_count"`
+	TotalColumns int       `yaml:"total_columns" json:"total_columns"`
+	IndexCount   int       `yaml:"index_count" json:"index_count"`
+	GeneratedAt  time.Time `yaml:"generated_at" json:"generated_at"`
 }
