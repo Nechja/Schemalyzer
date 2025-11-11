@@ -2,14 +2,14 @@ package compare
 
 import (
 	"testing"
-	
+
 	"github.com/nechja/schemalyzer/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestComparer_Compare_IdenticalSchemas(t *testing.T) {
 	comparer := NewComparer()
-	
+
 	schema1 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -24,7 +24,7 @@ func TestComparer_Compare_IdenticalSchemas(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -39,21 +39,21 @@ func TestComparer_Compare_IdenticalSchemas(t *testing.T) {
 			},
 		},
 	}
-	
+
 	result := comparer.Compare(schema1, schema2)
-	
+
 	assert.Equal(t, 0, len(result.Differences))
 }
 
 func TestComparer_Compare_AddedTable(t *testing.T) {
 	comparer := NewComparer()
-	
+
 	schema1 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
 		Tables:       []models.Table{},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -67,9 +67,9 @@ func TestComparer_Compare_AddedTable(t *testing.T) {
 			},
 		},
 	}
-	
+
 	result := comparer.Compare(schema1, schema2)
-	
+
 	assert.Equal(t, 1, len(result.Differences))
 	assert.Equal(t, models.Added, result.Differences[0].Type)
 	assert.Equal(t, "Table", result.Differences[0].ObjectType)
@@ -78,7 +78,7 @@ func TestComparer_Compare_AddedTable(t *testing.T) {
 
 func TestComparer_Compare_RemovedTable(t *testing.T) {
 	comparer := NewComparer()
-	
+
 	schema1 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -92,15 +92,15 @@ func TestComparer_Compare_RemovedTable(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
 		Tables:       []models.Table{},
 	}
-	
+
 	result := comparer.Compare(schema1, schema2)
-	
+
 	assert.Equal(t, 1, len(result.Differences))
 	assert.Equal(t, models.Removed, result.Differences[0].Type)
 	assert.Equal(t, "Table", result.Differences[0].ObjectType)
@@ -109,7 +109,7 @@ func TestComparer_Compare_RemovedTable(t *testing.T) {
 
 func TestComparer_Compare_ModifiedColumn(t *testing.T) {
 	comparer := NewComparer()
-	
+
 	schema1 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -124,7 +124,7 @@ func TestComparer_Compare_ModifiedColumn(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -139,9 +139,9 @@ func TestComparer_Compare_ModifiedColumn(t *testing.T) {
 			},
 		},
 	}
-	
+
 	result := comparer.Compare(schema1, schema2)
-	
+
 	assert.Equal(t, 1, len(result.Differences))
 	assert.Equal(t, models.Modified, result.Differences[0].Type)
 	assert.Equal(t, "Column", result.Differences[0].ObjectType)
@@ -150,7 +150,7 @@ func TestComparer_Compare_ModifiedColumn(t *testing.T) {
 
 func TestComparer_Compare_AddedConstraint(t *testing.T) {
 	comparer := NewComparer()
-	
+
 	schema1 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -163,7 +163,7 @@ func TestComparer_Compare_AddedConstraint(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -182,9 +182,9 @@ func TestComparer_Compare_AddedConstraint(t *testing.T) {
 			},
 		},
 	}
-	
+
 	result := comparer.Compare(schema1, schema2)
-	
+
 	assert.Equal(t, 1, len(result.Differences))
 	assert.Equal(t, models.Added, result.Differences[0].Type)
 	assert.Equal(t, "Constraint", result.Differences[0].ObjectType)
@@ -193,7 +193,7 @@ func TestComparer_Compare_AddedConstraint(t *testing.T) {
 
 func TestComparer_Compare_ModifiedIndex(t *testing.T) {
 	comparer := NewComparer()
-	
+
 	schema1 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -214,7 +214,7 @@ func TestComparer_Compare_ModifiedIndex(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -235,17 +235,73 @@ func TestComparer_Compare_ModifiedIndex(t *testing.T) {
 			},
 		},
 	}
-	
+
 	result := comparer.Compare(schema1, schema2)
-	
+
 	assert.Equal(t, 1, len(result.Differences))
 	assert.Equal(t, models.Modified, result.Differences[0].Type)
 	assert.Equal(t, "Index", result.Differences[0].ObjectType)
 }
 
+func TestComparer_Compare_ForeignKeyActionChange(t *testing.T) {
+	comparer := NewComparer()
+
+	schema1 := &models.Schema{
+		Name:         "test",
+		DatabaseType: models.PostgreSQL,
+		Tables: []models.Table{
+			{
+				Name:   "orders",
+				Schema: "test",
+				Constraints: []models.Constraint{
+					{
+						Name:             "orders_user_id_fkey",
+						Type:             models.ForeignKey,
+						Columns:          []string{"user_id"},
+						ReferencedTable:  "users",
+						ReferencedColumn: []string{"id"},
+						OnDelete:         "CASCADE",
+						OnUpdate:         "NO ACTION",
+					},
+				},
+			},
+		},
+	}
+
+	schema2 := &models.Schema{
+		Name:         "test",
+		DatabaseType: models.PostgreSQL,
+		Tables: []models.Table{
+			{
+				Name:   "orders",
+				Schema: "test",
+				Constraints: []models.Constraint{
+					{
+						Name:             "orders_user_id_fkey",
+						Type:             models.ForeignKey,
+						Columns:          []string{"user_id"},
+						ReferencedTable:  "users",
+						ReferencedColumn: []string{"id"},
+						OnDelete:         "SET NULL",
+						OnUpdate:         "CASCADE",
+					},
+				},
+			},
+		},
+	}
+
+	result := comparer.Compare(schema1, schema2)
+
+	if assert.Equal(t, 1, len(result.Differences)) {
+		assert.Equal(t, models.Modified, result.Differences[0].Type)
+		assert.Equal(t, "Constraint", result.Differences[0].ObjectType)
+		assert.Equal(t, "orders.orders_user_id_fkey", result.Differences[0].ObjectName)
+	}
+}
+
 func TestComparer_Compare_Views(t *testing.T) {
 	comparer := NewComparer()
-	
+
 	schema1 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -257,7 +313,7 @@ func TestComparer_Compare_Views(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name:         "test",
 		DatabaseType: models.PostgreSQL,
@@ -269,9 +325,9 @@ func TestComparer_Compare_Views(t *testing.T) {
 			},
 		},
 	}
-	
+
 	result := comparer.Compare(schema1, schema2)
-	
+
 	assert.Equal(t, 1, len(result.Differences))
 	assert.Equal(t, models.Modified, result.Differences[0].Type)
 	assert.Equal(t, "View", result.Differences[0].ObjectType)

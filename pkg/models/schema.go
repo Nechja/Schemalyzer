@@ -51,17 +51,19 @@ type Constraint struct {
 	Columns          []string
 	ReferencedTable  string
 	ReferencedColumn []string
+	OnUpdate         string `yaml:"on_update,omitempty" json:"on_update,omitempty"`
+	OnDelete         string `yaml:"on_delete,omitempty" json:"on_delete,omitempty"`
 	CheckExpression  string
 }
 
 type ConstraintType string
 
 const (
-	PrimaryKey  ConstraintType = "PRIMARY_KEY"
-	ForeignKey  ConstraintType = "FOREIGN_KEY"
-	Unique      ConstraintType = "UNIQUE"
-	Check       ConstraintType = "CHECK"
-	NotNull     ConstraintType = "NOT_NULL"
+	PrimaryKey ConstraintType = "PRIMARY_KEY"
+	ForeignKey ConstraintType = "FOREIGN_KEY"
+	Unique     ConstraintType = "UNIQUE"
+	Check      ConstraintType = "CHECK"
+	NotNull    ConstraintType = "NOT_NULL"
 )
 
 type Index struct {
@@ -80,13 +82,13 @@ type View struct {
 }
 
 type Sequence struct {
-	Schema      string
-	Name        string
-	StartValue  int64
-	Increment   int64
-	MinValue    int64
-	MaxValue    int64
-	IsCyclic    bool
+	Schema       string
+	Name         string
+	StartValue   int64
+	Increment    int64
+	MinValue     int64
+	MaxValue     int64
+	IsCyclic     bool
 	CurrentValue int64
 }
 
@@ -161,18 +163,18 @@ const (
 )
 
 type ComparisonResult struct {
-	SourceSchema      *Schema
-	TargetSchema      *Schema
-	Differences       []Difference
-	ComparisonTime    time.Time
-	SourceDatabase    string
-	TargetDatabase    string
+	SourceSchema   *Schema
+	TargetSchema   *Schema
+	Differences    []Difference
+	ComparisonTime time.Time
+	SourceDatabase string
+	TargetDatabase string
 }
 
 type SchemaStats struct {
-	TableCount    int       `yaml:"table_count" json:"table_count"`
-	ViewCount     int       `yaml:"view_count" json:"view_count"`
-	TotalColumns  int       `yaml:"total_columns" json:"total_columns"`
-	IndexCount    int       `yaml:"index_count" json:"index_count"`
-	GeneratedAt   time.Time `yaml:"generated_at" json:"generated_at"`
+	TableCount   int       `yaml:"table_count" json:"table_count"`
+	ViewCount    int       `yaml:"view_count" json:"view_count"`
+	TotalColumns int       `yaml:"total_columns" json:"total_columns"`
+	IndexCount   int       `yaml:"index_count" json:"index_count"`
+	GeneratedAt  time.Time `yaml:"generated_at" json:"generated_at"`
 }
