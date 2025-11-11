@@ -216,6 +216,8 @@ Flags:
 
 Foreign key differences include ON UPDATE/ON DELETE actions (e.g., `CASCADE`, `SET NULL`), ensuring JSON/YAML outputs expose cascading behavior changes alongside the constraint metadata.
 
+MySQL comparisons now track auto-increment attributes on columns in addition to data type, nullability, and defaults. Changes are visible in JSON/YAML outputs and result in `Column` differences.
+
 ### `validate` - Validate schema against a golden file
 
 Perfect for CI/CD pipelines. Returns exit code 0 if schemas match, 2 if they differ.

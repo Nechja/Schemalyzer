@@ -34,15 +34,16 @@ type Table struct {
 }
 
 type Column struct {
-	Name         string
-	DataType     string
-	IsNullable   bool
-	DefaultValue *string
-	IsPrimaryKey bool
-	IsUnique     bool
-	Comment      string
-	Position     int
-	Samples      []string `yaml:"samples,omitempty" json:"samples,omitempty"`
+	Name            string
+	DataType        string
+	IsNullable      bool
+	DefaultValue    *string
+	IsPrimaryKey    bool
+	IsUnique        bool
+	IsAutoIncrement bool `yaml:"auto_increment,omitempty" json:"auto_increment,omitempty"`
+	Comment         string
+	Position        int
+	Samples         []string `yaml:"samples,omitempty" json:"samples,omitempty"`
 }
 
 type Constraint struct {

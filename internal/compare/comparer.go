@@ -213,6 +213,9 @@ func (c *Comparer) columnsEqual(source, target *models.Column) bool {
 	if source.IsUnique != target.IsUnique {
 		return false
 	}
+	if source.IsAutoIncrement != target.IsAutoIncrement {
+		return false
+	}
 	if source.Comment != target.Comment {
 		return false
 	}
