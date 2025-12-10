@@ -82,8 +82,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	// In pipeline mode, only output if there are differences
 	if pipelineMode {
 		if len(result.Differences) > 0 {
-			fmt.Fprintf(os.Stderr, "FAIL: Schema validation failed - %d differences found\n", len(result.Differences))
-			return NewExitErrorf(ExitCodeMismatch, "validation failed with %d differences", len(result.Differences))
+			fmt.Fprintf(os.Stderr, "Validation failed: %d differences found\n", len(result.Differences))
+			os.Exit(ExitCodeMismatch)
 		}
 		// Success - no output
 		return nil
@@ -138,7 +138,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println()
 	}
-	
-	// Return error with exit code for differences
-	return NewExitErrorf(ExitCodeMismatch, "validation failed with %d differences", len(result.Differences))
+
+	// Exit with code 2 for differences (informational, not an error)
+	os.Exit(ExitCodeMismatch)
+	return nil
 }

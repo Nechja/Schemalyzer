@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/nechja/schemalyzer/internal/fingerprint"
@@ -112,12 +113,12 @@ func runCompareFingerprints(cmd *cobra.Command, args []string) error {
 			fmt.Println("\nRun 'schemalyzer compare' for detailed differences")
 		}
 	}
-	
+
 	if !match {
-		// Return error to trigger exit code 2
-		return NewExitError(ExitCodeMismatch, "schemas do not match")
+		// Exit with code 2 if schemas don't match
+		os.Exit(ExitCodeMismatch)
 	}
-	
+
 	return nil
 }
 
