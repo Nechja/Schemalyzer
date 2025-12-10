@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strconv"
-	"sync"
-	_ "github.com/sijms/go-ora/v2"
 	"github.com/nechja/schemalyzer/pkg/models"
+	_ "github.com/sijms/go-ora/v2"
+	"strconv"
 	"strings"
+	"sync"
 )
 
 type OracleReader struct {
@@ -24,16 +24,16 @@ func (r *OracleReader) Connect(ctx context.Context, connectionString string) err
 	if err != nil {
 		return fmt.Errorf("failed to connect to oracle: %w", err)
 	}
-	
+
 	// Configure connection pool for large databases
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(0) // No timeout
-	
+
 	if err := db.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to ping oracle: %w", err)
 	}
-	
+
 	r.db = db
 	return nil
 }
@@ -43,7 +43,7 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		Name:         schemaName,
 		DatabaseType: models.Oracle,
 	}
-	
+
 	// Use parallel fetching for better performance on large databases
 	type result struct {
 		tables     []models.Table
@@ -54,13 +54,13 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		triggers   []models.Trigger
 		err        error
 	}
-	
+
 	var wg sync.WaitGroup
 	res := &result{}
-	
+
 	// Fetch schema objects in parallel
 	wg.Add(6)
-	
+
 	go func() {
 		defer wg.Done()
 		tables, err := r.getTables(ctx, schemaName)
@@ -70,7 +70,7 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		}
 		res.tables = tables
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		views, err := r.getViews(ctx, schemaName)
@@ -80,7 +80,7 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		}
 		res.views = views
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		sequences, err := r.getSequences(ctx, schemaName)
@@ -90,7 +90,7 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		}
 		res.sequences = sequences
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		functions, err := r.getFunctions(ctx, schemaName)
@@ -100,7 +100,7 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		}
 		res.functions = functions
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		procedures, err := r.getProcedures(ctx, schemaName)
@@ -110,7 +110,7 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		}
 		res.procedures = procedures
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		triggers, err := r.getTriggers(ctx, schemaName)
@@ -120,20 +120,20 @@ func (r *OracleReader) GetSchema(ctx context.Context, schemaName string) (*model
 		}
 		res.triggers = triggers
 	}()
-	
+
 	wg.Wait()
-	
+
 	if res.err != nil {
 		return nil, res.err
 	}
-	
+
 	schema.Tables = res.tables
 	schema.Views = res.views
 	schema.Sequences = res.sequences
 	schema.Functions = res.functions
 	schema.Procedures = res.procedures
 	schema.Triggers = res.triggers
-	
+
 	return schema, nil
 }
 
@@ -146,13 +146,13 @@ func (r *OracleReader) ListSchemas(ctx context.Context) ([]string, error) {
 			'ORDDATA', 'CTXSYS', 'ANONYMOUS', 'XDB', 'ORDPLUGINS', 'SI_INFORMTN_SCHEMA',
 			'OLAPSYS', 'ORACLE_OCM', 'XS$NULL', 'BI', 'PM', 'MDDATA', 'IX', 'SH', 'DIP')
 		ORDER BY username`
-	
+
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list schemas: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var schemas []string
 	for rows.Next() {
 		var schema string
@@ -161,7 +161,7 @@ func (r *OracleReader) ListSchemas(ctx context.Context) ([]string, error) {
 		}
 		schemas = append(schemas, schema)
 	}
-	
+
 	return schemas, nil
 }
 
@@ -172,48 +172,48 @@ func (r *OracleReader) getTables(ctx context.Context, schemaName string) ([]mode
 		LEFT JOIN all_tab_comments c ON t.owner = c.owner AND t.table_name = c.table_name
 		WHERE t.owner = :1 AND t.temporary = 'N'
 		ORDER BY t.table_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var tables []models.Table
 	for rows.Next() {
 		var table models.Table
 		var comment sql.NullString
-		
+
 		if err := rows.Scan(&table.Name, &comment); err != nil {
 			return nil, err
 		}
-		
+
 		table.Schema = schemaName
 		if comment.Valid {
 			table.Comment = comment.String
 		}
-		
+
 		columns, err := r.getColumns(ctx, schemaName, table.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get columns for table %s: %w", table.Name, err)
 		}
 		table.Columns = columns
-		
+
 		constraints, err := r.getConstraints(ctx, schemaName, table.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get constraints for table %s: %w", table.Name, err)
 		}
 		table.Constraints = constraints
-		
+
 		indexes, err := r.getIndexes(ctx, schemaName, table.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get indexes for table %s: %w", table.Name, err)
 		}
 		table.Indexes = indexes
-		
+
 		tables = append(tables, table)
 	}
-	
+
 	return tables, nil
 }
 
@@ -237,23 +237,23 @@ func (r *OracleReader) getColumns(ctx context.Context, schemaName, tableName str
 		LEFT JOIN all_col_comments cc ON c.owner = cc.owner AND c.table_name = cc.table_name AND c.column_name = cc.column_name
 		WHERE c.owner = :1 AND c.table_name = :2
 		ORDER BY c.column_id`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName), strings.ToUpper(tableName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var columns []models.Column
 	for rows.Next() {
 		var col models.Column
 		var nullable string
 		var defaultValue, comment sql.NullString
-		
+
 		if err := rows.Scan(&col.Name, &col.DataType, &nullable, &defaultValue, &col.Position, &comment); err != nil {
 			return nil, err
 		}
-		
+
 		col.IsNullable = nullable == "Y"
 		if defaultValue.Valid {
 			def := strings.TrimSpace(defaultValue.String)
@@ -262,10 +262,10 @@ func (r *OracleReader) getColumns(ctx context.Context, schemaName, tableName str
 		if comment.Valid {
 			col.Comment = comment.String
 		}
-		
+
 		columns = append(columns, col)
 	}
-	
+
 	return columns, nil
 }
 
@@ -274,33 +274,35 @@ func (r *OracleReader) getConstraints(ctx context.Context, schemaName, tableName
 		SELECT 
 			c.constraint_name,
 			c.constraint_type,
-			c.search_condition
+			c.search_condition,
+			c.delete_rule
 		FROM all_constraints c
 		WHERE c.owner = :1 AND c.table_name = :2
 		AND c.constraint_type IN ('P', 'U', 'R', 'C')
 		ORDER BY c.constraint_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName), strings.ToUpper(tableName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	constraintMap := make(map[string]*models.Constraint)
-	
+
 	for rows.Next() {
 		var constraintName, constraintType string
 		var searchCondition sql.NullString
-		
-		if err := rows.Scan(&constraintName, &constraintType, &searchCondition); err != nil {
+		var deleteRule sql.NullString
+
+		if err := rows.Scan(&constraintName, &constraintType, &searchCondition, &deleteRule); err != nil {
 			return nil, err
 		}
-		
+
 		constraint := &models.Constraint{
 			Name:    constraintName,
 			Columns: []string{},
 		}
-		
+
 		switch constraintType {
 		case "P":
 			constraint.Type = models.PrimaryKey
@@ -308,16 +310,19 @@ func (r *OracleReader) getConstraints(ctx context.Context, schemaName, tableName
 			constraint.Type = models.Unique
 		case "R":
 			constraint.Type = models.ForeignKey
+			if deleteRule.Valid {
+				constraint.OnDelete = strings.ToUpper(deleteRule.String)
+			}
 		case "C":
 			constraint.Type = models.Check
 			if searchCondition.Valid {
 				constraint.CheckExpression = searchCondition.String
 			}
 		}
-		
+
 		constraintMap[constraintName] = constraint
 	}
-	
+
 	// Get columns for each constraint
 	for name, constraint := range constraintMap {
 		colQuery := `
@@ -325,12 +330,12 @@ func (r *OracleReader) getConstraints(ctx context.Context, schemaName, tableName
 			FROM all_cons_columns
 			WHERE owner = :1 AND constraint_name = :2
 			ORDER BY position`
-		
+
 		colRows, err := r.db.QueryContext(ctx, colQuery, strings.ToUpper(schemaName), name)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		for colRows.Next() {
 			var columnName string
 			if err := colRows.Scan(&columnName); err != nil {
@@ -341,7 +346,7 @@ func (r *OracleReader) getConstraints(ctx context.Context, schemaName, tableName
 		}
 		colRows.Close()
 	}
-	
+
 	// Get foreign key references
 	for name, constraint := range constraintMap {
 		if constraint.Type == models.ForeignKey {
@@ -354,12 +359,12 @@ func (r *OracleReader) getConstraints(ctx context.Context, schemaName, tableName
 				JOIN all_cons_columns rc ON r.constraint_name = rc.constraint_name AND r.owner = rc.owner
 				WHERE c.owner = :1 AND c.constraint_name = :2
 				ORDER BY rc.position`
-			
+
 			refRows, err := r.db.QueryContext(ctx, refQuery, strings.ToUpper(schemaName), name)
 			if err != nil {
 				return nil, err
 			}
-			
+
 			var refTable string
 			for refRows.Next() {
 				var refColumn string
@@ -375,12 +380,12 @@ func (r *OracleReader) getConstraints(ctx context.Context, schemaName, tableName
 			refRows.Close()
 		}
 	}
-	
+
 	var constraints []models.Constraint
 	for _, constraint := range constraintMap {
 		constraints = append(constraints, *constraint)
 	}
-	
+
 	return constraints, nil
 }
 
@@ -399,22 +404,22 @@ func (r *OracleReader) getIndexes(ctx context.Context, schemaName, tableName str
 			AND c.constraint_type = 'P'
 		)
 		ORDER BY i.index_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName), strings.ToUpper(tableName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	indexMap := make(map[string]*models.Index)
-	
+
 	for rows.Next() {
 		var indexName, uniqueness, indexType string
-		
+
 		if err := rows.Scan(&indexName, &uniqueness, &indexType); err != nil {
 			return nil, err
 		}
-		
+
 		indexMap[indexName] = &models.Index{
 			Name:      indexName,
 			TableName: tableName,
@@ -423,7 +428,7 @@ func (r *OracleReader) getIndexes(ctx context.Context, schemaName, tableName str
 			Columns:   []string{},
 		}
 	}
-	
+
 	// Get columns for each index
 	for name, index := range indexMap {
 		colQuery := `
@@ -431,12 +436,12 @@ func (r *OracleReader) getIndexes(ctx context.Context, schemaName, tableName str
 			FROM all_ind_columns
 			WHERE index_owner = :1 AND index_name = :2
 			ORDER BY column_position`
-		
+
 		colRows, err := r.db.QueryContext(ctx, colQuery, strings.ToUpper(schemaName), name)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		for colRows.Next() {
 			var columnName string
 			if err := colRows.Scan(&columnName); err != nil {
@@ -447,12 +452,12 @@ func (r *OracleReader) getIndexes(ctx context.Context, schemaName, tableName str
 		}
 		colRows.Close()
 	}
-	
+
 	var indexes []models.Index
 	for _, index := range indexMap {
 		indexes = append(indexes, *index)
 	}
-	
+
 	return indexes, nil
 }
 
@@ -462,13 +467,13 @@ func (r *OracleReader) getViews(ctx context.Context, schemaName string) ([]model
 		FROM all_views
 		WHERE owner = :1
 		ORDER BY view_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var views []models.View
 	for rows.Next() {
 		var view models.View
@@ -476,16 +481,16 @@ func (r *OracleReader) getViews(ctx context.Context, schemaName string) ([]model
 			return nil, err
 		}
 		view.Schema = schemaName
-		
+
 		columns, err := r.getViewColumns(ctx, schemaName, view.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get columns for view %s: %w", view.Name, err)
 		}
 		view.Columns = columns
-		
+
 		views = append(views, view)
 	}
-	
+
 	return views, nil
 }
 
@@ -506,26 +511,26 @@ func (r *OracleReader) getViewColumns(ctx context.Context, schemaName, viewName 
 		FROM all_tab_columns
 		WHERE owner = :1 AND table_name = :2
 		ORDER BY column_id`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName), strings.ToUpper(viewName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var columns []models.Column
 	for rows.Next() {
 		var col models.Column
 		var nullable string
-		
+
 		if err := rows.Scan(&col.Name, &col.DataType, &nullable, &col.Position); err != nil {
 			return nil, err
 		}
-		
+
 		col.IsNullable = nullable == "Y"
 		columns = append(columns, col)
 	}
-	
+
 	return columns, nil
 }
 
@@ -541,24 +546,24 @@ func (r *OracleReader) getSequences(ctx context.Context, schemaName string) ([]m
 		FROM all_sequences
 		WHERE sequence_owner = :1
 		ORDER BY sequence_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var sequences []models.Sequence
 	for rows.Next() {
 		var seq models.Sequence
 		var cycleFlag string
 		var minValueStr, maxValueStr string
-		
-		if err := rows.Scan(&seq.Name, &minValueStr, &maxValueStr, 
+
+		if err := rows.Scan(&seq.Name, &minValueStr, &maxValueStr,
 			&seq.Increment, &cycleFlag, &seq.CurrentValue); err != nil {
 			return nil, err
 		}
-		
+
 		// Handle Oracle's large numeric values
 		// If the value is the Oracle default max (28 9's), set to 0 to indicate no limit
 		if maxValueStr == "9999999999999999999999999999" {
@@ -571,18 +576,18 @@ func (r *OracleReader) getSequences(ctx context.Context, schemaName string) ([]m
 				seq.MaxValue = 0 // Too large for int64
 			}
 		}
-		
+
 		if val, err := strconv.ParseInt(minValueStr, 10, 64); err == nil {
 			seq.MinValue = val
 		} else {
 			seq.MinValue = 0
 		}
-		
+
 		seq.Schema = schemaName
 		seq.IsCyclic = cycleFlag == "Y"
 		sequences = append(sequences, seq)
 	}
-	
+
 	return sequences, nil
 }
 
@@ -594,27 +599,27 @@ func (r *OracleReader) getFunctions(ctx context.Context, schemaName string) ([]m
 		FROM all_objects
 		WHERE owner = :1 AND object_type = 'FUNCTION'
 		ORDER BY object_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var functions []models.Function
 	for rows.Next() {
 		var fn models.Function
 		var ddl string
-		
+
 		if err := rows.Scan(&fn.Name, &ddl); err != nil {
 			return nil, err
 		}
-		
+
 		fn.Schema = schemaName
 		fn.Body = ddl
 		functions = append(functions, fn)
 	}
-	
+
 	return functions, nil
 }
 
@@ -626,27 +631,27 @@ func (r *OracleReader) getProcedures(ctx context.Context, schemaName string) ([]
 		FROM all_objects
 		WHERE owner = :1 AND object_type = 'PROCEDURE'
 		ORDER BY object_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var procedures []models.Procedure
 	for rows.Next() {
 		var proc models.Procedure
 		var ddl string
-		
+
 		if err := rows.Scan(&proc.Name, &ddl); err != nil {
 			return nil, err
 		}
-		
+
 		proc.Schema = schemaName
 		proc.Body = ddl
 		procedures = append(procedures, proc)
 	}
-	
+
 	return procedures, nil
 }
 
@@ -661,30 +666,30 @@ func (r *OracleReader) getTriggers(ctx context.Context, schemaName string) ([]mo
 		FROM all_triggers
 		WHERE owner = :1
 		ORDER BY trigger_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, strings.ToUpper(schemaName))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var triggers []models.Trigger
 	for rows.Next() {
 		var trigger models.Trigger
 		var triggerType, event string
-		
+
 		if err := rows.Scan(&trigger.Name, &trigger.TableName, &triggerType, &event, &trigger.Body); err != nil {
 			return nil, err
 		}
-		
+
 		trigger.Schema = schemaName
-		
+
 		if strings.Contains(triggerType, "BEFORE") {
 			trigger.Timing = models.Before
 		} else {
 			trigger.Timing = models.After
 		}
-		
+
 		if strings.Contains(event, "INSERT") {
 			trigger.Event = models.Insert
 		} else if strings.Contains(event, "UPDATE") {
@@ -692,10 +697,10 @@ func (r *OracleReader) getTriggers(ctx context.Context, schemaName string) ([]mo
 		} else if strings.Contains(event, "DELETE") {
 			trigger.Event = models.Delete
 		}
-		
+
 		triggers = append(triggers, trigger)
 	}
-	
+
 	return triggers, nil
 }
 
@@ -734,10 +739,10 @@ func (r *OracleReader) GetColumnSamples(ctx context.Context, schemaName, tableNa
 		WHERE "%s" IS NOT NULL
 		AND ROWNUM <= %d
 	`, strings.ToUpper(columnName),
-	   strings.ToUpper(schemaName),
-	   strings.ToUpper(tableName),
-	   strings.ToUpper(columnName),
-	   limit)
+		strings.ToUpper(schemaName),
+		strings.ToUpper(tableName),
+		strings.ToUpper(columnName),
+		limit)
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {

@@ -214,6 +214,8 @@ Flags:
   --tables-only            Compare only tables and their structure (no procedures, functions, triggers)
 ```
 
+Foreign key differences include ON UPDATE/ON DELETE actions (e.g., `CASCADE`, `SET NULL`), ensuring JSON/YAML outputs expose cascading behavior changes alongside the constraint metadata.
+
 ### `validate` - Validate schema against a golden file
 
 Perfect for CI/CD pipelines. Returns exit code 0 if schemas match, 2 if they differ.

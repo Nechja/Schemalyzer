@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sync"
 	"github.com/lib/pq"
 	"github.com/nechja/schemalyzer/pkg/models"
+	"strings"
+	"sync"
 )
 
 type PostgresReader struct {
@@ -22,16 +23,16 @@ func (r *PostgresReader) Connect(ctx context.Context, connectionString string) e
 	if err != nil {
 		return fmt.Errorf("failed to connect to postgres: %w", err)
 	}
-	
+
 	// Configure connection pool for large databases
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(0) // No timeout
-	
+
 	if err := db.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to ping postgres: %w", err)
 	}
-	
+
 	r.db = db
 	return nil
 }
@@ -41,7 +42,7 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		Name:         schemaName,
 		DatabaseType: models.PostgreSQL,
 	}
-	
+
 	// Use parallel fetching for better performance on large databases
 	type result struct {
 		tables     []models.Table
@@ -52,13 +53,13 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		triggers   []models.Trigger
 		err        error
 	}
-	
+
 	var wg sync.WaitGroup
 	res := &result{}
-	
+
 	// Fetch tables in parallel
 	wg.Add(6)
-	
+
 	go func() {
 		defer wg.Done()
 		tables, err := r.getTables(ctx, schemaName)
@@ -68,7 +69,7 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		}
 		res.tables = tables
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		views, err := r.getViews(ctx, schemaName)
@@ -78,7 +79,7 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		}
 		res.views = views
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		sequences, err := r.getSequences(ctx, schemaName)
@@ -88,7 +89,7 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		}
 		res.sequences = sequences
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		functions, err := r.getFunctions(ctx, schemaName)
@@ -98,7 +99,7 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		}
 		res.functions = functions
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		procedures, err := r.getProcedures(ctx, schemaName)
@@ -108,7 +109,7 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		}
 		res.procedures = procedures
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		triggers, err := r.getTriggers(ctx, schemaName)
@@ -118,20 +119,20 @@ func (r *PostgresReader) GetSchema(ctx context.Context, schemaName string) (*mod
 		}
 		res.triggers = triggers
 	}()
-	
+
 	wg.Wait()
-	
+
 	if res.err != nil {
 		return nil, res.err
 	}
-	
+
 	schema.Tables = res.tables
 	schema.Views = res.views
 	schema.Sequences = res.sequences
 	schema.Functions = res.functions
 	schema.Procedures = res.procedures
 	schema.Triggers = res.triggers
-	
+
 	return schema, nil
 }
 
@@ -141,13 +142,13 @@ func (r *PostgresReader) ListSchemas(ctx context.Context) ([]string, error) {
 		FROM information_schema.schemata 
 		WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
 		ORDER BY schema_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list schemas: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var schemas []string
 	for rows.Next() {
 		var schema string
@@ -156,7 +157,7 @@ func (r *PostgresReader) ListSchemas(ctx context.Context) ([]string, error) {
 		}
 		schemas = append(schemas, schema)
 	}
-	
+
 	return schemas, nil
 }
 
@@ -168,48 +169,48 @@ func (r *PostgresReader) getTables(ctx context.Context, schemaName string) ([]mo
 		JOIN pg_namespace pgn ON pgn.oid = pgc.relnamespace AND pgn.nspname = t.table_schema
 		WHERE table_schema = $1 AND table_type = 'BASE TABLE'
 		ORDER BY table_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var tables []models.Table
 	for rows.Next() {
 		var table models.Table
 		var comment sql.NullString
-		
+
 		if err := rows.Scan(&table.Name, &comment); err != nil {
 			return nil, err
 		}
-		
+
 		table.Schema = schemaName
 		if comment.Valid {
 			table.Comment = comment.String
 		}
-		
+
 		columns, err := r.getColumns(ctx, schemaName, table.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get columns for table %s: %w", table.Name, err)
 		}
 		table.Columns = columns
-		
+
 		constraints, err := r.getConstraints(ctx, schemaName, table.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get constraints for table %s: %w", table.Name, err)
 		}
 		table.Constraints = constraints
-		
+
 		indexes, err := r.getIndexes(ctx, schemaName, table.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get indexes for table %s: %w", table.Name, err)
 		}
 		table.Indexes = indexes
-		
+
 		tables = append(tables, table)
 	}
-	
+
 	return tables, nil
 }
 
@@ -227,23 +228,23 @@ func (r *PostgresReader) getColumns(ctx context.Context, schemaName, tableName s
 		JOIN pg_namespace pgn ON pgn.oid = pgc.relnamespace AND pgn.nspname = c.table_schema
 		WHERE c.table_schema = $1 AND c.table_name = $2
 		ORDER BY c.ordinal_position`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName, tableName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var columns []models.Column
 	for rows.Next() {
 		var col models.Column
 		var isNullable string
 		var defaultValue, comment sql.NullString
-		
+
 		if err := rows.Scan(&col.Name, &col.DataType, &isNullable, &defaultValue, &col.Position, &comment); err != nil {
 			return nil, err
 		}
-		
+
 		col.IsNullable = isNullable == "YES"
 		if defaultValue.Valid {
 			col.DefaultValue = &defaultValue.String
@@ -251,10 +252,10 @@ func (r *PostgresReader) getColumns(ctx context.Context, schemaName, tableName s
 		if comment.Valid {
 			col.Comment = comment.String
 		}
-		
+
 		columns = append(columns, col)
 	}
-	
+
 	return columns, nil
 }
 
@@ -266,7 +267,9 @@ func (r *PostgresReader) getConstraints(ctx context.Context, schemaName, tableNa
 			kcu.column_name,
 			ccu.table_name AS foreign_table_name,
 			ccu.column_name AS foreign_column_name,
-			cc.check_clause
+			cc.check_clause,
+			rc.update_rule,
+			rc.delete_rule
 		FROM information_schema.table_constraints tc
 		LEFT JOIN information_schema.key_column_usage kcu 
 			ON tc.constraint_name = kcu.constraint_name
@@ -277,31 +280,35 @@ func (r *PostgresReader) getConstraints(ctx context.Context, schemaName, tableNa
 		LEFT JOIN information_schema.check_constraints cc
 			ON cc.constraint_name = tc.constraint_name
 			AND cc.constraint_schema = tc.table_schema
+		LEFT JOIN information_schema.referential_constraints rc
+			ON rc.constraint_name = tc.constraint_name
+			AND rc.constraint_schema = tc.table_schema
 		WHERE tc.table_schema = $1 AND tc.table_name = $2
 		ORDER BY tc.constraint_name, kcu.ordinal_position`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName, tableName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	constraintMap := make(map[string]*models.Constraint)
-	
+
 	for rows.Next() {
 		var constraintName, constraintType string
 		var columnName, foreignTable, foreignColumn, checkClause sql.NullString
-		
-		if err := rows.Scan(&constraintName, &constraintType, &columnName, &foreignTable, &foreignColumn, &checkClause); err != nil {
+		var updateRule, deleteRule sql.NullString
+
+		if err := rows.Scan(&constraintName, &constraintType, &columnName, &foreignTable, &foreignColumn, &checkClause, &updateRule, &deleteRule); err != nil {
 			return nil, err
 		}
-		
+
 		if _, exists := constraintMap[constraintName]; !exists {
 			constraint := &models.Constraint{
 				Name:    constraintName,
 				Columns: []string{},
 			}
-			
+
 			switch constraintType {
 			case "PRIMARY KEY":
 				constraint.Type = models.PrimaryKey
@@ -309,6 +316,12 @@ func (r *PostgresReader) getConstraints(ctx context.Context, schemaName, tableNa
 				constraint.Type = models.ForeignKey
 				if foreignTable.Valid {
 					constraint.ReferencedTable = foreignTable.String
+				}
+				if updateRule.Valid {
+					constraint.OnUpdate = strings.ToUpper(updateRule.String)
+				}
+				if deleteRule.Valid {
+					constraint.OnDelete = strings.ToUpper(deleteRule.String)
 				}
 			case "UNIQUE":
 				constraint.Type = models.Unique
@@ -318,24 +331,24 @@ func (r *PostgresReader) getConstraints(ctx context.Context, schemaName, tableNa
 					constraint.CheckExpression = checkClause.String
 				}
 			}
-			
+
 			constraintMap[constraintName] = constraint
 		}
-		
+
 		if columnName.Valid {
 			constraintMap[constraintName].Columns = append(constraintMap[constraintName].Columns, columnName.String)
 		}
-		
+
 		if constraintMap[constraintName].Type == models.ForeignKey && foreignColumn.Valid {
 			constraintMap[constraintName].ReferencedColumn = append(constraintMap[constraintName].ReferencedColumn, foreignColumn.String)
 		}
 	}
-	
+
 	var constraints []models.Constraint
 	for _, constraint := range constraintMap {
 		constraints = append(constraints, *constraint)
 	}
-	
+
 	return constraints, nil
 }
 
@@ -354,27 +367,27 @@ func (r *PostgresReader) getIndexes(ctx context.Context, schemaName, tableName s
 		JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(idx.indkey)
 		WHERE n.nspname = $1 AND t.relname = $2 AND NOT idx.indisprimary
 		GROUP BY i.relname, idx.indisunique, am.amname`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName, tableName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var indexes []models.Index
 	for rows.Next() {
 		var index models.Index
 		var columnNames []string
-		
+
 		if err := rows.Scan(&index.Name, &index.IsUnique, &index.Type, pq.Array(&columnNames)); err != nil {
 			return nil, err
 		}
-		
+
 		index.TableName = tableName
 		index.Columns = columnNames
 		indexes = append(indexes, index)
 	}
-	
+
 	return indexes, nil
 }
 
@@ -384,13 +397,13 @@ func (r *PostgresReader) getViews(ctx context.Context, schemaName string) ([]mod
 		FROM information_schema.views
 		WHERE table_schema = $1
 		ORDER BY table_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var views []models.View
 	for rows.Next() {
 		var view models.View
@@ -398,16 +411,16 @@ func (r *PostgresReader) getViews(ctx context.Context, schemaName string) ([]mod
 			return nil, err
 		}
 		view.Schema = schemaName
-		
+
 		columns, err := r.getColumns(ctx, schemaName, view.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get columns for view %s: %w", view.Name, err)
 		}
 		view.Columns = columns
-		
+
 		views = append(views, view)
 	}
-	
+
 	return views, nil
 }
 
@@ -423,28 +436,28 @@ func (r *PostgresReader) getSequences(ctx context.Context, schemaName string) ([
 		FROM information_schema.sequences
 		WHERE sequence_schema = $1
 		ORDER BY sequence_name`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var sequences []models.Sequence
 	for rows.Next() {
 		var seq models.Sequence
 		var cycleOption string
-		
-		if err := rows.Scan(&seq.Name, &seq.StartValue, &seq.Increment, 
+
+		if err := rows.Scan(&seq.Name, &seq.StartValue, &seq.Increment,
 			&seq.MinValue, &seq.MaxValue, &cycleOption); err != nil {
 			return nil, err
 		}
-		
+
 		seq.Schema = schemaName
 		seq.IsCyclic = cycleOption == "YES"
 		sequences = append(sequences, seq)
 	}
-	
+
 	return sequences, nil
 }
 
@@ -458,13 +471,13 @@ func (r *PostgresReader) getFunctions(ctx context.Context, schemaName string) ([
 		JOIN pg_namespace n ON n.oid = p.pronamespace
 		WHERE n.nspname = $1 AND p.prokind = 'f'
 		ORDER BY p.proname`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var functions []models.Function
 	for rows.Next() {
 		var fn models.Function
@@ -474,7 +487,7 @@ func (r *PostgresReader) getFunctions(ctx context.Context, schemaName string) ([
 		fn.Schema = schemaName
 		functions = append(functions, fn)
 	}
-	
+
 	return functions, nil
 }
 
@@ -487,13 +500,13 @@ func (r *PostgresReader) getProcedures(ctx context.Context, schemaName string) (
 		JOIN pg_namespace n ON n.oid = p.pronamespace
 		WHERE n.nspname = $1 AND p.prokind = 'p'
 		ORDER BY p.proname`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var procedures []models.Procedure
 	for rows.Next() {
 		var proc models.Procedure
@@ -503,7 +516,7 @@ func (r *PostgresReader) getProcedures(ctx context.Context, schemaName string) (
 		proc.Schema = schemaName
 		procedures = append(procedures, proc)
 	}
-	
+
 	return procedures, nil
 }
 
@@ -527,31 +540,31 @@ func (r *PostgresReader) getTriggers(ctx context.Context, schemaName string) ([]
 		JOIN pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = $1 AND NOT t.tgisinternal
 		ORDER BY t.tgname`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, schemaName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var triggers []models.Trigger
 	for rows.Next() {
 		var trigger models.Trigger
 		var timing, event string
-		
+
 		if err := rows.Scan(&trigger.Name, &trigger.TableName, &timing, &event, &trigger.Body); err != nil {
 			return nil, err
 		}
-		
+
 		trigger.Schema = schemaName
-		
+
 		switch timing {
 		case "BEFORE":
 			trigger.Timing = models.Before
 		case "AFTER":
 			trigger.Timing = models.After
 		}
-		
+
 		switch event {
 		case "INSERT":
 			trigger.Event = models.Insert
@@ -560,10 +573,10 @@ func (r *PostgresReader) getTriggers(ctx context.Context, schemaName string) ([]
 		case "DELETE":
 			trigger.Event = models.Delete
 		}
-		
+
 		triggers = append(triggers, trigger)
 	}
-	
+
 	return triggers, nil
 }
 
