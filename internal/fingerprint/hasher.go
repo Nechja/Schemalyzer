@@ -97,6 +97,10 @@ func (h *Hasher) normalizeColumns(columns []models.Column) []map[string]interfac
 			normalized["default"] = *col.DefaultValue
 		}
 
+		if col.IsAutoIncrement {
+			normalized["auto_increment"] = true
+		}
+
 		if h.includeComments && col.Comment != "" {
 			normalized["comment"] = col.Comment
 		}

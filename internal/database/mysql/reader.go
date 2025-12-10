@@ -210,7 +210,8 @@ func (r *MySQLReader) getColumns(ctx context.Context, schemaName, tableName stri
 			column_default,
 			ordinal_position,
 			column_comment,
-			column_key
+			column_key,
+			extra
 		FROM information_schema.columns
 		WHERE table_schema = ? AND table_name = ?
 		ORDER BY ordinal_position`
@@ -224,11 +225,11 @@ func (r *MySQLReader) getColumns(ctx context.Context, schemaName, tableName stri
 	var columns []models.Column
 	for rows.Next() {
 		var col models.Column
-		var isNullable, columnKey string
+		var isNullable, columnKey, extra string
 		var defaultValue sql.NullString
 
 		if err := rows.Scan(&col.Name, &col.DataType, &isNullable, &defaultValue,
-			&col.Position, &col.Comment, &columnKey); err != nil {
+			&col.Position, &col.Comment, &columnKey, &extra); err != nil {
 			return nil, err
 		}
 
@@ -241,6 +242,10 @@ func (r *MySQLReader) getColumns(ctx context.Context, schemaName, tableName stri
 			col.IsPrimaryKey = true
 		} else if columnKey == "UNI" {
 			col.IsUnique = true
+		}
+
+		if strings.Contains(strings.ToLower(extra), "auto_increment") {
+			col.IsAutoIncrement = true
 		}
 
 		columns = append(columns, col)

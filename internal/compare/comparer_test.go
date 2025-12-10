@@ -148,6 +148,43 @@ func TestComparer_Compare_ModifiedColumn(t *testing.T) {
 	assert.Equal(t, "users.name", result.Differences[0].ObjectName)
 }
 
+func TestComparer_Compare_AutoIncrementChange(t *testing.T) {
+	comparer := NewComparer()
+
+	schema1 := &models.Schema{
+		Name:         "test",
+		DatabaseType: models.MySQL,
+		Tables: []models.Table{
+			{
+				Name: "users",
+				Columns: []models.Column{
+					{Name: "id", DataType: "int", IsPrimaryKey: true, IsAutoIncrement: true},
+				},
+			},
+		},
+	}
+
+	schema2 := &models.Schema{
+		Name:         "test",
+		DatabaseType: models.MySQL,
+		Tables: []models.Table{
+			{
+				Name: "users",
+				Columns: []models.Column{
+					{Name: "id", DataType: "int", IsPrimaryKey: true, IsAutoIncrement: false},
+				},
+			},
+		},
+	}
+
+	result := comparer.Compare(schema1, schema2)
+	if assert.Equal(t, 1, len(result.Differences)) {
+		assert.Equal(t, models.Modified, result.Differences[0].Type)
+		assert.Equal(t, "Column", result.Differences[0].ObjectType)
+		assert.Equal(t, "users.id", result.Differences[0].ObjectName)
+	}
+}
+
 func TestComparer_Compare_AddedConstraint(t *testing.T) {
 	comparer := NewComparer()
 
