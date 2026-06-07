@@ -2,18 +2,18 @@ package docs
 
 import (
 	"fmt"
-	"strings"
 	"github.com/nechja/schemalyzer/pkg/models"
+	"strings"
 )
 
 // GraphVizGenerator generates DOT format for GraphViz
 type GraphVizGenerator struct {
 	// Options for rendering
-	RankDir        string // TB (top-bottom), LR (left-right), BT, RL
-	NodeShape      string // record, box, ellipse, etc.
-	ShowDataTypes  bool
-	ShowNullable   bool
-	ColorScheme    string // blues, greens, accent, etc.
+	RankDir       string // TB (top-bottom), LR (left-right), BT, RL
+	NodeShape     string // record, box, ellipse, etc.
+	ShowDataTypes bool
+	ShowNullable  bool
+	ColorScheme   string // blues, greens, accent, etc.
 }
 
 func NewGraphVizGenerator() *GraphVizGenerator {
@@ -28,27 +28,27 @@ func NewGraphVizGenerator() *GraphVizGenerator {
 
 func (g *GraphVizGenerator) Generate(schema *models.Schema) (string, error) {
 	var sb strings.Builder
-	
+
 	// DOT header
 	sb.WriteString("digraph ERD {\n")
 	sb.WriteString(fmt.Sprintf("  graph [rankdir=%s, bgcolor=white, splines=true, overlap=false];\n", g.RankDir))
 	sb.WriteString("  node [shape=record, fontname=\"Arial\", fontsize=11];\n")
 	sb.WriteString("  edge [fontname=\"Arial\", fontsize=10];\n\n")
-	
+
 	// Title
 	sb.WriteString("  labelloc=\"t\";\n")
 	sb.WriteString(fmt.Sprintf("  label=\"%s Database Schema\";\n", schema.Name))
 	sb.WriteString("  fontsize=16;\n\n")
-	
+
 	// Color definitions based on table types/purposes
 	colors := g.getColorScheme()
-	
+
 	// Generate nodes for tables
 	for i, table := range schema.Tables {
 		color := colors[i%len(colors)]
 		g.generateGraphVizTable(&sb, table, color)
 	}
-	
+
 	// Generate edges for relationships
 	for _, table := range schema.Tables {
 		for _, constraint := range table.Constraints {
@@ -57,40 +57,40 @@ func (g *GraphVizGenerator) Generate(schema *models.Schema) (string, error) {
 			}
 		}
 	}
-	
+
 	sb.WriteString("}\n")
-	
+
 	return sb.String(), nil
 }
 
 func (g *GraphVizGenerator) generateGraphVizTable(sb *strings.Builder, table models.Table, color string) {
 	tableName := sanitizeGraphVizName(table.Name)
-	
+
 	// Start table node
 	sb.WriteString(fmt.Sprintf("  %s [\n", tableName))
 	sb.WriteString(fmt.Sprintf("    fillcolor=\"%s\"\n", color))
 	sb.WriteString("    style=\"filled\"\n")
 	sb.WriteString("    label=<\n")
-	
+
 	// HTML-like label for better formatting
 	sb.WriteString("      <table border=\"0\" cellborder=\"1\" cellspacing=\"0\" cellpadding=\"4\">\n")
-	
+
 	// Table header
-	sb.WriteString(fmt.Sprintf("        <tr><td colspan=\"3\" bgcolor=\"%s\"><b>%s</b></td></tr>\n", 
+	sb.WriteString(fmt.Sprintf("        <tr><td colspan=\"3\" bgcolor=\"%s\"><b>%s</b></td></tr>\n",
 		darkenColor(color), table.Name))
-	
+
 	// Column header
 	if g.ShowDataTypes {
 		sb.WriteString("        <tr><td bgcolor=\"#f0f0f0\"><b>Column</b></td><td bgcolor=\"#f0f0f0\"><b>Type</b></td><td bgcolor=\"#f0f0f0\"><b>Constraints</b></td></tr>\n")
 	} else {
 		sb.WriteString("        <tr><td bgcolor=\"#f0f0f0\"><b>Columns</b></td></tr>\n")
 	}
-	
+
 	// Columns
 	for _, col := range table.Columns {
 		g.generateGraphVizColumn(sb, col, table.Constraints)
 	}
-	
+
 	sb.WriteString("      </table>\n")
 	sb.WriteString("    >\n")
 	sb.WriteString("  ];\n\n")
@@ -99,11 +99,11 @@ func (g *GraphVizGenerator) generateGraphVizTable(sb *strings.Builder, table mod
 func (g *GraphVizGenerator) generateGraphVizColumn(sb *strings.Builder, col models.Column, constraints []models.Constraint) {
 	// Build constraints info
 	var constraintInfo []string
-	
+
 	if col.IsPrimaryKey {
 		constraintInfo = append(constraintInfo, "PK")
 	}
-	
+
 	// Check if foreign key
 	for _, constraint := range constraints {
 		if constraint.Type == models.ForeignKey {
@@ -115,24 +115,24 @@ func (g *GraphVizGenerator) generateGraphVizColumn(sb *strings.Builder, col mode
 			}
 		}
 	}
-	
+
 	if col.IsUnique {
 		constraintInfo = append(constraintInfo, "UQ")
 	}
-	
+
 	if !col.IsNullable {
 		constraintInfo = append(constraintInfo, "NN")
 	}
-	
+
 	constraintStr := strings.Join(constraintInfo, ",")
-	
+
 	if g.ShowDataTypes {
 		// Port for foreign key connections
 		port := ""
 		if strings.Contains(constraintStr, "FK") {
 			port = fmt.Sprintf(" port=\"%s\"", col.Name)
 		}
-		
+
 		sb.WriteString(fmt.Sprintf("        <tr><td align=\"left\"%s>%s</td><td align=\"left\">%s</td><td>%s</td></tr>\n",
 			port, col.Name, simplifyDataTypeForGraph(col.DataType), constraintStr))
 	} else {
@@ -147,11 +147,11 @@ func (g *GraphVizGenerator) generateGraphVizColumn(sb *strings.Builder, col mode
 func (g *GraphVizGenerator) generateGraphVizRelationship(sb *strings.Builder, tableName string, constraint models.Constraint) {
 	fromTable := sanitizeGraphVizName(tableName)
 	toTable := sanitizeGraphVizName(constraint.ReferencedTable)
-	
+
 	// Determine arrow style based on relationship
-	arrowhead := "crow"  // Many side
-	arrowtail := "tee"   // One side
-	
+	arrowhead := "crow" // Many side
+	arrowtail := "tee"  // One side
+
 	// Edge attributes
 	sb.WriteString(fmt.Sprintf("  %s -> %s [\n", fromTable, toTable))
 	sb.WriteString(fmt.Sprintf("    arrowhead=\"%s\"\n", arrowhead))
@@ -184,12 +184,12 @@ func darkenColor(color string) string {
 		r := color[1:3]
 		g := color[3:5]
 		b := color[5:7]
-		
+
 		// Darken by 20%
 		rInt := int(float64(hexToInt(r)) * 0.8)
 		gInt := int(float64(hexToInt(g)) * 0.8)
 		bInt := int(float64(hexToInt(b)) * 0.8)
-		
+
 		return fmt.Sprintf("#%02x%02x%02x", rInt, gInt, bInt)
 	}
 	return color
@@ -212,14 +212,14 @@ func sanitizeGraphVizName(name string) string {
 func simplifyDataTypeForGraph(dataType string) string {
 	// Shorten common data types for cleaner diagrams
 	replacements := map[string]string{
-		"CHARACTER VARYING": "VARCHAR",
+		"CHARACTER VARYING":           "VARCHAR",
 		"TIMESTAMP WITHOUT TIME ZONE": "TIMESTAMP",
-		"TIMESTAMP WITH TIME ZONE": "TIMESTAMPTZ",
-		"INTEGER": "INT",
-		"NUMERIC": "DECIMAL",
-		"BOOLEAN": "BOOL",
+		"TIMESTAMP WITH TIME ZONE":    "TIMESTAMPTZ",
+		"INTEGER":                     "INT",
+		"NUMERIC":                     "DECIMAL",
+		"BOOLEAN":                     "BOOL",
 	}
-	
+
 	upperType := strings.ToUpper(dataType)
 	for old, new := range replacements {
 		if strings.Contains(upperType, old) {
@@ -227,7 +227,7 @@ func simplifyDataTypeForGraph(dataType string) string {
 			dataType = strings.Replace(dataType, strings.ToLower(old), new, -1)
 		}
 	}
-	
+
 	return dataType
 }
 
@@ -240,23 +240,23 @@ func NewD2Generator() *D2Generator {
 
 func (g *D2Generator) Generate(schema *models.Schema) (string, error) {
 	var sb strings.Builder
-	
+
 	// D2 header
 	sb.WriteString(fmt.Sprintf("# %s Database Schema\n\n", schema.Name))
 	sb.WriteString("direction: down\n\n")
-	
+
 	// Style definitions
 	sb.WriteString("style: {\n")
 	sb.WriteString("  fill: white\n")
 	sb.WriteString("  stroke: black\n")
 	sb.WriteString("  stroke-width: 2\n")
 	sb.WriteString("}\n\n")
-	
+
 	// Generate tables
 	for _, table := range schema.Tables {
 		g.generateD2Table(&sb, table)
 	}
-	
+
 	// Generate relationships
 	for _, table := range schema.Tables {
 		for _, constraint := range table.Constraints {
@@ -265,17 +265,17 @@ func (g *D2Generator) Generate(schema *models.Schema) (string, error) {
 			}
 		}
 	}
-	
+
 	return sb.String(), nil
 }
 
 func (g *D2Generator) generateD2Table(sb *strings.Builder, table models.Table) {
 	tableName := sanitizeD2Name(table.Name)
-	
+
 	sb.WriteString(fmt.Sprintf("%s: {\n", tableName))
 	sb.WriteString("  shape: sql_table\n")
 	sb.WriteString(fmt.Sprintf("  label: %s\n", table.Name))
-	
+
 	// Primary keys
 	var pks []string
 	for _, col := range table.Columns {
@@ -283,7 +283,7 @@ func (g *D2Generator) generateD2Table(sb *strings.Builder, table models.Table) {
 			pks = append(pks, fmt.Sprintf("%s: %s", col.Name, simplifyDataType(col.DataType)))
 		}
 	}
-	
+
 	if len(pks) > 0 {
 		sb.WriteString("  constraint: [\n")
 		for _, pk := range pks {
@@ -291,7 +291,7 @@ func (g *D2Generator) generateD2Table(sb *strings.Builder, table models.Table) {
 		}
 		sb.WriteString("  ]\n")
 	}
-	
+
 	// Other columns
 	for _, col := range table.Columns {
 		if !col.IsPrimaryKey {
@@ -302,14 +302,14 @@ func (g *D2Generator) generateD2Table(sb *strings.Builder, table models.Table) {
 			sb.WriteString(fmt.Sprintf("  %s: %s%s\n", col.Name, simplifyDataType(col.DataType), nullable))
 		}
 	}
-	
+
 	sb.WriteString("}\n\n")
 }
 
 func (g *D2Generator) generateD2Relationship(sb *strings.Builder, tableName string, constraint models.Constraint) {
 	fromTable := sanitizeD2Name(tableName)
 	toTable := sanitizeD2Name(constraint.ReferencedTable)
-	
+
 	sb.WriteString(fmt.Sprintf("%s -> %s: %s {\n", fromTable, toTable, constraint.Name))
 	sb.WriteString("  source-arrowhead: cf-many\n")
 	sb.WriteString("  target-arrowhead: cf-one\n")

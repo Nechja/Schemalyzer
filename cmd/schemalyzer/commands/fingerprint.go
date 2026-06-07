@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	fingerprintType   string
-	fingerprintConn   string
-	fingerprintSchema string
-	fingerprintVerbose bool
-	fingerprintJSON   bool
+	fingerprintType       string
+	fingerprintConn       string
+	fingerprintSchema     string
+	fingerprintVerbose    bool
+	fingerprintJSON       bool
 	fingerprintTablesOnly bool
 )
 
@@ -34,7 +34,7 @@ func init() {
 	fingerprintCmd.Flags().BoolVar(&fingerprintVerbose, "verbose", false, "Show detailed information about what's included in the hash")
 	fingerprintCmd.Flags().BoolVar(&fingerprintJSON, "json", false, "Output in JSON format with metadata")
 	fingerprintCmd.Flags().BoolVar(&fingerprintTablesOnly, "tables-only", false, "Include only tables in the fingerprint (no procedures, functions, triggers)")
-	
+
 	_ = fingerprintCmd.MarkFlagRequired("type")
 	_ = fingerprintCmd.MarkFlagRequired("conn")
 	_ = fingerprintCmd.MarkFlagRequired("schema")
@@ -42,36 +42,36 @@ func init() {
 
 func runFingerprint(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
-	
+
 	reader, err := createReader(fingerprintType)
 	if err != nil {
 		return fmt.Errorf("failed to create reader: %w", err)
 	}
 	defer reader.Close()
-	
+
 	if err := reader.Connect(ctx, fingerprintConn); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	
+
 	if fingerprintVerbose {
 		fmt.Fprintf(os.Stderr, "Reading schema: %s\n", fingerprintSchema)
 	}
-	
+
 	schema, err := reader.GetSchema(ctx, fingerprintSchema)
 	if err != nil {
 		return fmt.Errorf("failed to read schema: %w", err)
 	}
-	
+
 	if fingerprintTablesOnly {
 		schema = filterTablesOnly(schema)
 	}
-	
+
 	hasher := fingerprint.NewHasher().WithVerbose(fingerprintVerbose)
 	hash, err := hasher.GenerateFingerprint(schema)
 	if err != nil {
 		return fmt.Errorf("failed to generate fingerprint: %w", err)
 	}
-	
+
 	if fingerprintJSON {
 		output := struct {
 			Database     string    `json:"database"`
@@ -99,7 +99,7 @@ func runFingerprint(cmd *cobra.Command, args []string) error {
 			Timestamp:    time.Now(),
 			TablesOnly:   fingerprintTablesOnly,
 		}
-		
+
 		output.Statistics.Tables = len(schema.Tables)
 		output.Statistics.Views = len(schema.Views)
 		output.Statistics.Indexes = len(schema.Indexes)
@@ -107,7 +107,7 @@ func runFingerprint(cmd *cobra.Command, args []string) error {
 		output.Statistics.Procedures = len(schema.Procedures)
 		output.Statistics.Functions = len(schema.Functions)
 		output.Statistics.Triggers = len(schema.Triggers)
-		
+
 		jsonData, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal JSON: %w", err)
@@ -128,6 +128,6 @@ func runFingerprint(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Println(hash)
 	}
-	
+
 	return nil
 }

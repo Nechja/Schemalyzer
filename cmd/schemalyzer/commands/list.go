@@ -3,7 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
-	
+
 	"github.com/spf13/cobra"
 )
 
@@ -23,29 +23,29 @@ func init() {
 
 func runList(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
-	
+
 	// Create reader
 	reader, err := createReader(sourceType)
 	if err != nil {
 		return fmt.Errorf("failed to create reader: %w", err)
 	}
 	defer reader.Close()
-	
+
 	// Connect
 	if err := reader.Connect(ctx, sourceConn); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	
+
 	// List schemas
 	schemas, err := reader.ListSchemas(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list schemas: %w", err)
 	}
-	
+
 	fmt.Println("Available schemas:")
 	for _, schema := range schemas {
 		fmt.Printf("  - %s\n", schema)
 	}
-	
+
 	return nil
 }

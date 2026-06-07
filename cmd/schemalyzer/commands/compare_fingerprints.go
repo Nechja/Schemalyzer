@@ -46,10 +46,10 @@ func init() {
 
 func runCompareFingerprints(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
-	
+
 	var sourceHash, targetHash string
 	var err error
-	
+
 	if sourceFingerprint != "" {
 		sourceHash = sourceFingerprint
 	} else {
@@ -61,7 +61,7 @@ func runCompareFingerprints(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to generate source fingerprint: %w", err)
 		}
 	}
-	
+
 	if targetFingerprint != "" {
 		targetHash = targetFingerprint
 	} else {
@@ -73,9 +73,9 @@ func runCompareFingerprints(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to generate target fingerprint: %w", err)
 		}
 	}
-	
+
 	match := sourceHash == targetHash
-	
+
 	if cfJSON {
 		output := struct {
 			SourceFingerprint string    `json:"source_fingerprint"`
@@ -90,14 +90,14 @@ func runCompareFingerprints(cmd *cobra.Command, args []string) error {
 			Match:             match,
 			Timestamp:         time.Now(),
 		}
-		
+
 		if cfSourceSchema != "" {
 			output.SourceSchema = fmt.Sprintf("%s://%s", cfSourceType, cfSourceSchema)
 		}
 		if cfTargetSchema != "" {
 			output.TargetSchema = fmt.Sprintf("%s://%s", cfTargetType, cfTargetSchema)
 		}
-		
+
 		jsonData, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal JSON: %w", err)
@@ -128,20 +128,20 @@ func generateFingerprint(ctx context.Context, dbType, conn, schema string, table
 		return "", fmt.Errorf("failed to create reader: %w", err)
 	}
 	defer reader.Close()
-	
+
 	if err := reader.Connect(ctx, conn); err != nil {
 		return "", fmt.Errorf("failed to connect to database: %w", err)
 	}
-	
+
 	schemaData, err := reader.GetSchema(ctx, schema)
 	if err != nil {
 		return "", fmt.Errorf("failed to read schema: %w", err)
 	}
-	
+
 	if tablesOnly {
 		schemaData = filterTablesOnly(schemaData)
 	}
-	
+
 	hasher := fingerprint.NewHasher()
 	return hasher.GenerateFingerprint(schemaData)
 }

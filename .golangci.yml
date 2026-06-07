@@ -1,0 +1,26 @@
+version: "2"
+
+formatters:
+  enable:
+    - gofmt
+
+linters:
+  settings:
+    errcheck:
+      # Closing resources (rows, readers, files) is idiomatic on defer and the
+      # returned error is not actionable; Sscanf here is best-effort parsing.
+      exclude-functions:
+        - (*database/sql.Rows).Close
+        - (*os.File).Close
+        - (github.com/nechja/schemalyzer/internal/database.SchemaReader).Close
+        - fmt.Sscanf
+    staticcheck:
+      checks:
+        - all
+        # QF* are "quickfix" refactoring suggestions (off by default in
+        # standalone staticcheck); ST1000 wants package-level doc comments.
+        # Both are stylistic, not bugs.
+        - -QF1003
+        - -QF1004
+        - -QF1012
+        - -ST1000

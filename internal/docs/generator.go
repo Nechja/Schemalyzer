@@ -2,8 +2,8 @@ package docs
 
 import (
 	"fmt"
-	"strings"
 	"github.com/nechja/schemalyzer/pkg/models"
+	"strings"
 )
 
 type DocumentGenerator interface {
@@ -18,7 +18,7 @@ func NewPlantUMLGenerator() *PlantUMLGenerator {
 
 func (g *PlantUMLGenerator) Generate(schema *models.Schema) (string, error) {
 	var sb strings.Builder
-	
+
 	// PlantUML header
 	sb.WriteString("@startuml\n")
 	sb.WriteString("!theme plain\n")
@@ -26,14 +26,14 @@ func (g *PlantUMLGenerator) Generate(schema *models.Schema) (string, error) {
 	sb.WriteString("skinparam classAttributeIconSize 0\n")
 	sb.WriteString("skinparam classFontSize 12\n")
 	sb.WriteString("skinparam classFontName Arial\n\n")
-	
+
 	sb.WriteString(fmt.Sprintf("title %s Database Schema\n\n", schema.Name))
-	
+
 	// Generate entities for tables
 	for _, table := range schema.Tables {
 		g.generateTable(&sb, table)
 	}
-	
+
 	// Generate relationships from foreign keys
 	for _, table := range schema.Tables {
 		for _, constraint := range table.Constraints {
@@ -42,24 +42,24 @@ func (g *PlantUMLGenerator) Generate(schema *models.Schema) (string, error) {
 			}
 		}
 	}
-	
+
 	sb.WriteString("\n@enduml\n")
-	
+
 	return sb.String(), nil
 }
 
 func (g *PlantUMLGenerator) generateTable(sb *strings.Builder, table models.Table) {
 	sb.WriteString(fmt.Sprintf("entity \"%s\" as %s {\n", table.Name, sanitizeName(table.Name)))
-	
+
 	// Primary key columns first
 	for _, col := range table.Columns {
 		if col.IsPrimaryKey {
 			sb.WriteString(fmt.Sprintf("  * **%s** : %s <<PK>>\n", col.Name, col.DataType))
 		}
 	}
-	
+
 	sb.WriteString("  --\n")
-	
+
 	// Other columns
 	for _, col := range table.Columns {
 		if !col.IsPrimaryKey {
@@ -67,12 +67,12 @@ func (g *PlantUMLGenerator) generateTable(sb *strings.Builder, table models.Tabl
 			if col.IsNullable {
 				nullable = " ?"
 			}
-			
+
 			unique := ""
 			if col.IsUnique {
 				unique = " <<unique>>"
 			}
-			
+
 			// Check if it's a foreign key
 			fk := ""
 			for _, constraint := range table.Constraints {
@@ -85,21 +85,21 @@ func (g *PlantUMLGenerator) generateTable(sb *strings.Builder, table models.Tabl
 					}
 				}
 			}
-			
+
 			sb.WriteString(fmt.Sprintf("  %s : %s%s%s%s\n", col.Name, col.DataType, nullable, unique, fk))
 		}
 	}
-	
+
 	sb.WriteString("}\n\n")
 }
 
 func (g *PlantUMLGenerator) generateRelationship(sb *strings.Builder, tableName string, constraint models.Constraint) {
 	// Determine cardinality based on constraint
-	cardinality := "}o--||"  // Many to one (most common for FK)
-	
-	sb.WriteString(fmt.Sprintf("%s %s %s : %s\n", 
-		sanitizeName(tableName), 
-		cardinality, 
+	cardinality := "}o--||" // Many to one (most common for FK)
+
+	sb.WriteString(fmt.Sprintf("%s %s %s : %s\n",
+		sanitizeName(tableName),
+		cardinality,
 		sanitizeName(constraint.ReferencedTable),
 		constraint.Name))
 }
@@ -118,14 +118,14 @@ func NewMermaidGenerator() *MermaidGenerator {
 
 func (g *MermaidGenerator) Generate(schema *models.Schema) (string, error) {
 	var sb strings.Builder
-	
+
 	sb.WriteString("```mermaid\nerDiagram\n")
-	
+
 	// Generate entities
 	for _, table := range schema.Tables {
 		g.generateMermaidTable(&sb, table)
 	}
-	
+
 	// Generate relationships
 	for _, table := range schema.Tables {
 		for _, constraint := range table.Constraints {
@@ -134,23 +134,23 @@ func (g *MermaidGenerator) Generate(schema *models.Schema) (string, error) {
 			}
 		}
 	}
-	
+
 	sb.WriteString("```\n")
-	
+
 	return sb.String(), nil
 }
 
 func (g *MermaidGenerator) generateMermaidTable(sb *strings.Builder, table models.Table) {
 	sb.WriteString(fmt.Sprintf("    %s {\n", sanitizeMermaidName(table.Name)))
-	
+
 	for _, col := range table.Columns {
 		dataType := simplifyDataType(col.DataType)
 		keys := []string{}
-		
+
 		if col.IsPrimaryKey {
 			keys = append(keys, "PK")
 		}
-		
+
 		// Check if foreign key
 		for _, constraint := range table.Constraints {
 			if constraint.Type == models.ForeignKey {
@@ -162,15 +162,15 @@ func (g *MermaidGenerator) generateMermaidTable(sb *strings.Builder, table model
 				}
 			}
 		}
-		
+
 		keyStr := ""
 		if len(keys) > 0 {
 			keyStr = " \"" + strings.Join(keys, ",") + "\""
 		}
-		
+
 		sb.WriteString(fmt.Sprintf("        %s %s%s\n", dataType, sanitizeMermaidName(col.Name), keyStr))
 	}
-	
+
 	sb.WriteString("    }\n")
 }
 
@@ -213,11 +213,11 @@ func NewMarkdownDocGenerator() *MarkdownDocGenerator {
 
 func (g *MarkdownDocGenerator) Generate(schema *models.Schema) (string, error) {
 	var sb strings.Builder
-	
+
 	// Header
 	sb.WriteString(fmt.Sprintf("# %s Database Schema Documentation\n\n", schema.Name))
 	sb.WriteString(fmt.Sprintf("**Database Type**: %s\n\n", schema.DatabaseType))
-	
+
 	// Table of Contents
 	sb.WriteString("## Table of Contents\n\n")
 	sb.WriteString("- [Tables](#tables)\n")
@@ -237,13 +237,13 @@ func (g *MarkdownDocGenerator) Generate(schema *models.Schema) (string, error) {
 		sb.WriteString("- [Triggers](#triggers)\n")
 	}
 	sb.WriteString("\n")
-	
+
 	// Tables section
 	sb.WriteString("## Tables\n\n")
 	for _, table := range schema.Tables {
 		g.generateMarkdownTable(&sb, table)
 	}
-	
+
 	// Views section
 	if len(schema.Views) > 0 {
 		sb.WriteString("## Views\n\n")
@@ -251,7 +251,7 @@ func (g *MarkdownDocGenerator) Generate(schema *models.Schema) (string, error) {
 			g.generateMarkdownView(&sb, view)
 		}
 	}
-	
+
 	// Sequences section
 	if len(schema.Sequences) > 0 {
 		sb.WriteString("## Sequences\n\n")
@@ -259,7 +259,7 @@ func (g *MarkdownDocGenerator) Generate(schema *models.Schema) (string, error) {
 			g.generateMarkdownSequence(&sb, seq)
 		}
 	}
-	
+
 	// Functions section
 	if len(schema.Functions) > 0 {
 		sb.WriteString("## Functions\n\n")
@@ -270,7 +270,7 @@ func (g *MarkdownDocGenerator) Generate(schema *models.Schema) (string, error) {
 			sb.WriteString("\n```\n\n")
 		}
 	}
-	
+
 	// Procedures section
 	if len(schema.Procedures) > 0 {
 		sb.WriteString("## Procedures\n\n")
@@ -281,7 +281,7 @@ func (g *MarkdownDocGenerator) Generate(schema *models.Schema) (string, error) {
 			sb.WriteString("\n```\n\n")
 		}
 	}
-	
+
 	// Triggers section
 	if len(schema.Triggers) > 0 {
 		sb.WriteString("## Triggers\n\n")
@@ -289,33 +289,33 @@ func (g *MarkdownDocGenerator) Generate(schema *models.Schema) (string, error) {
 			g.generateMarkdownTrigger(&sb, trigger)
 		}
 	}
-	
+
 	return sb.String(), nil
 }
 
 func (g *MarkdownDocGenerator) generateMarkdownTable(sb *strings.Builder, table models.Table) {
 	sb.WriteString(fmt.Sprintf("### %s\n\n", table.Name))
-	
+
 	if table.Comment != "" {
 		sb.WriteString(fmt.Sprintf("_%s_\n\n", table.Comment))
 	}
-	
+
 	// Columns table
 	sb.WriteString("**Columns:**\n\n")
 	sb.WriteString("| Column | Type | Nullable | Default | Keys | Description |\n")
 	sb.WriteString("|--------|------|----------|---------|------|-------------|\n")
-	
+
 	for _, col := range table.Columns {
 		nullable := "No"
 		if col.IsNullable {
 			nullable = "Yes"
 		}
-		
+
 		defaultVal := "-"
 		if col.DefaultValue != nil {
 			defaultVal = *col.DefaultValue
 		}
-		
+
 		keys := []string{}
 		if col.IsPrimaryKey {
 			keys = append(keys, "PK")
@@ -323,7 +323,7 @@ func (g *MarkdownDocGenerator) generateMarkdownTable(sb *strings.Builder, table 
 		if col.IsUnique {
 			keys = append(keys, "UNIQUE")
 		}
-		
+
 		// Check if foreign key
 		for _, constraint := range table.Constraints {
 			if constraint.Type == models.ForeignKey {
@@ -335,16 +335,16 @@ func (g *MarkdownDocGenerator) generateMarkdownTable(sb *strings.Builder, table 
 				}
 			}
 		}
-		
+
 		keyStr := strings.Join(keys, ", ")
 		if keyStr == "" {
 			keyStr = "-"
 		}
-		
+
 		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n",
 			col.Name, col.DataType, nullable, defaultVal, keyStr, col.Comment))
 	}
-	
+
 	// Constraints section
 	if len(table.Constraints) > 0 {
 		sb.WriteString("\n**Constraints:**\n\n")
@@ -353,8 +353,8 @@ func (g *MarkdownDocGenerator) generateMarkdownTable(sb *strings.Builder, table 
 			case models.PrimaryKey:
 				sb.WriteString(fmt.Sprintf("- **Primary Key** (%s): %s\n", constraint.Name, strings.Join(constraint.Columns, ", ")))
 			case models.ForeignKey:
-				sb.WriteString(fmt.Sprintf("- **Foreign Key** (%s): %s → %s.%s\n", 
-					constraint.Name, 
+				sb.WriteString(fmt.Sprintf("- **Foreign Key** (%s): %s → %s.%s\n",
+					constraint.Name,
 					strings.Join(constraint.Columns, ", "),
 					constraint.ReferencedTable,
 					strings.Join(constraint.ReferencedColumn, ", ")))
@@ -365,7 +365,7 @@ func (g *MarkdownDocGenerator) generateMarkdownTable(sb *strings.Builder, table 
 			}
 		}
 	}
-	
+
 	// Indexes section
 	if len(table.Indexes) > 0 {
 		sb.WriteString("\n**Indexes:**\n\n")
@@ -377,17 +377,17 @@ func (g *MarkdownDocGenerator) generateMarkdownTable(sb *strings.Builder, table 
 			sb.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", indexType, index.Name, strings.Join(index.Columns, ", ")))
 		}
 	}
-	
+
 	sb.WriteString("\n")
 }
 
 func (g *MarkdownDocGenerator) generateMarkdownView(sb *strings.Builder, view models.View) {
 	sb.WriteString(fmt.Sprintf("### %s\n\n", view.Name))
-	
+
 	sb.WriteString("**Columns:**\n\n")
 	sb.WriteString("| Column | Type | Nullable |\n")
 	sb.WriteString("|--------|------|----------|\n")
-	
+
 	for _, col := range view.Columns {
 		nullable := "No"
 		if col.IsNullable {
@@ -395,7 +395,7 @@ func (g *MarkdownDocGenerator) generateMarkdownView(sb *strings.Builder, view mo
 		}
 		sb.WriteString(fmt.Sprintf("| %s | %s | %s |\n", col.Name, col.DataType, nullable))
 	}
-	
+
 	sb.WriteString("\n**Definition:**\n\n")
 	sb.WriteString("```sql\n")
 	sb.WriteString(view.Definition)
