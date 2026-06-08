@@ -26,7 +26,7 @@ func NewIgnoreConfig(patterns []string) (*IgnoreConfig, error) {
 	for _, pattern := range patterns {
 		parts := strings.SplitN(pattern, ":", 2)
 		var objectType, patternStr string
-		
+
 		if len(parts) == 2 {
 			objectType = strings.ToLower(parts[0])
 			patternStr = parts[1]
@@ -55,7 +55,7 @@ func NewIgnoreConfig(patterns []string) (*IgnoreConfig, error) {
 // ShouldIgnore checks if an object should be ignored based on the patterns
 func (ic *IgnoreConfig) ShouldIgnore(objectType, objectName string) bool {
 	objectType = strings.ToLower(objectType)
-	
+
 	for _, pattern := range ic.Patterns {
 		// Check if pattern applies to this object type
 		if pattern.ObjectType != "*" && pattern.ObjectType != objectType {

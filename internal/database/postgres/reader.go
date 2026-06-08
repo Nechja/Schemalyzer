@@ -346,6 +346,10 @@ func (r *PostgresReader) getConstraints(ctx context.Context, schemaName, tableNa
 
 	var constraints []models.Constraint
 	for _, constraint := range constraintMap {
+		// Skip synthetic NOT NULL checks; nullability is captured on the column.
+		if constraint.IsNotNullCheck() {
+			continue
+		}
 		constraints = append(constraints, *constraint)
 	}
 

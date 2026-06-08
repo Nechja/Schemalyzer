@@ -8,9 +8,9 @@ import (
 
 func TestGenerateFingerprint(t *testing.T) {
 	hasher := NewHasher()
-	
+
 	schema1 := &models.Schema{
-		Name: "test",
+		Name:         "test",
 		DatabaseType: models.PostgreSQL,
 		Tables: []models.Table{
 			{
@@ -27,21 +27,21 @@ func TestGenerateFingerprint(t *testing.T) {
 			},
 		},
 	}
-	
+
 	hash1, err := hasher.GenerateFingerprint(schema1)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint: %v", err)
 	}
-	
+
 	if len(hash1) != 64 {
 		t.Errorf("Expected SHA256 hash length of 64, got %d", len(hash1))
 	}
-	
+
 	hash2, err := hasher.GenerateFingerprint(schema1)
 	if err != nil {
 		t.Fatalf("Failed to generate second fingerprint: %v", err)
 	}
-	
+
 	if hash1 != hash2 {
 		t.Error("Same schema should produce same fingerprint")
 	}
@@ -49,7 +49,7 @@ func TestGenerateFingerprint(t *testing.T) {
 
 func TestFingerprintDifference(t *testing.T) {
 	hasher := NewHasher()
-	
+
 	schema1 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -62,7 +62,7 @@ func TestFingerprintDifference(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -75,17 +75,17 @@ func TestFingerprintDifference(t *testing.T) {
 			},
 		},
 	}
-	
+
 	hash1, err := hasher.GenerateFingerprint(schema1)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema1: %v", err)
 	}
-	
+
 	hash2, err := hasher.GenerateFingerprint(schema2)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema2: %v", err)
 	}
-	
+
 	if hash1 == hash2 {
 		t.Error("Different schemas should produce different fingerprints")
 	}
@@ -93,7 +93,7 @@ func TestFingerprintDifference(t *testing.T) {
 
 func TestFingerprintIgnoresComments(t *testing.T) {
 	hasher := NewHasher()
-	
+
 	schema1 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -106,7 +106,7 @@ func TestFingerprintIgnoresComments(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -119,17 +119,17 @@ func TestFingerprintIgnoresComments(t *testing.T) {
 			},
 		},
 	}
-	
+
 	hash1, err := hasher.GenerateFingerprint(schema1)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema1: %v", err)
 	}
-	
+
 	hash2, err := hasher.GenerateFingerprint(schema2)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema2: %v", err)
 	}
-	
+
 	if hash1 != hash2 {
 		t.Error("Schemas with different comments only should produce same fingerprint")
 	}
@@ -137,7 +137,7 @@ func TestFingerprintIgnoresComments(t *testing.T) {
 
 func TestFingerprintOrderIndependence(t *testing.T) {
 	hasher := NewHasher()
-	
+
 	schema1 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -157,7 +157,7 @@ func TestFingerprintOrderIndependence(t *testing.T) {
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -177,17 +177,17 @@ func TestFingerprintOrderIndependence(t *testing.T) {
 			},
 		},
 	}
-	
+
 	hash1, err := hasher.GenerateFingerprint(schema1)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema1: %v", err)
 	}
-	
+
 	hash2, err := hasher.GenerateFingerprint(schema2)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema2: %v", err)
 	}
-	
+
 	if hash1 != hash2 {
 		t.Error("Schemas with different ordering should produce same fingerprint")
 	}
@@ -195,7 +195,7 @@ func TestFingerprintOrderIndependence(t *testing.T) {
 
 func TestFingerprintWithAllObjectTypes(t *testing.T) {
 	hasher := NewHasher()
-	
+
 	schema := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -220,12 +220,12 @@ func TestFingerprintWithAllObjectTypes(t *testing.T) {
 			{Name: "user_audit", TableName: "users", Event: models.Insert, Timing: models.After},
 		},
 	}
-	
+
 	hash, err := hasher.GenerateFingerprint(schema)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint: %v", err)
 	}
-	
+
 	if len(hash) != 64 {
 		t.Errorf("Expected SHA256 hash length of 64, got %d", len(hash))
 	}
@@ -233,7 +233,7 @@ func TestFingerprintWithAllObjectTypes(t *testing.T) {
 
 func TestFingerprintIndexColumnOrderIndependence(t *testing.T) {
 	hasher := NewHasher()
-	
+
 	schema1 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -251,13 +251,13 @@ func TestFingerprintIndexColumnOrderIndependence(t *testing.T) {
 		Indexes: []models.Index{
 			{
 				Name:      "global_idx",
-				TableName: "users", 
+				TableName: "users",
 				Columns:   []string{"id", "status", "type"},
 				IsUnique:  false,
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name: "test",
 		Tables: []models.Table{
@@ -281,17 +281,17 @@ func TestFingerprintIndexColumnOrderIndependence(t *testing.T) {
 			},
 		},
 	}
-	
+
 	hash1, err := hasher.GenerateFingerprint(schema1)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema1: %v", err)
 	}
-	
+
 	hash2, err := hasher.GenerateFingerprint(schema2)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema2: %v", err)
 	}
-	
+
 	if hash1 != hash2 {
 		t.Error("Indexes with different column order should produce same fingerprint")
 	}
@@ -299,7 +299,7 @@ func TestFingerprintIndexColumnOrderIndependence(t *testing.T) {
 
 func TestFingerprintParameterOrderIndependence(t *testing.T) {
 	hasher := NewHasher()
-	
+
 	schema1 := &models.Schema{
 		Name: "test",
 		Functions: []models.Function{
@@ -311,11 +311,11 @@ func TestFingerprintParameterOrderIndependence(t *testing.T) {
 					{Name: "param_c", DataType: "boolean", Direction: models.Out},
 				},
 				ReturnType: "integer",
-				Body: "BEGIN RETURN 1; END",
+				Body:       "BEGIN RETURN 1; END",
 			},
 		},
 	}
-	
+
 	schema2 := &models.Schema{
 		Name: "test",
 		Functions: []models.Function{
@@ -327,22 +327,92 @@ func TestFingerprintParameterOrderIndependence(t *testing.T) {
 					{Name: "param_b", DataType: "varchar", Direction: models.In},
 				},
 				ReturnType: "integer",
-				Body: "BEGIN RETURN 1; END",
+				Body:       "BEGIN RETURN 1; END",
 			},
 		},
 	}
-	
+
 	hash1, err := hasher.GenerateFingerprint(schema1)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema1: %v", err)
 	}
-	
+
 	hash2, err := hasher.GenerateFingerprint(schema2)
 	if err != nil {
 		t.Fatalf("Failed to generate fingerprint for schema2: %v", err)
 	}
-	
+
 	if hash1 != hash2 {
 		t.Error("Functions with different parameter order should produce same fingerprint")
+	}
+}
+
+// Constraint names are often system-generated (Oracle SYS_C*, Postgres
+// OID-based) and differ between structurally-identical schemas. The fingerprint
+// must depend on constraint content, not names, so it stays stable across
+// environments.
+func TestFingerprintStableAcrossConstraintNames(t *testing.T) {
+	hasher := NewHasher()
+
+	mk := func(pkName, ukName, ckName string) *models.Schema {
+		return &models.Schema{
+			Name:         "test",
+			DatabaseType: models.Oracle,
+			Tables: []models.Table{
+				{
+					Name: "orders",
+					Columns: []models.Column{
+						{Name: "id", DataType: "integer", IsNullable: false},
+						{Name: "email", DataType: "varchar(255)", IsNullable: false},
+					},
+					Constraints: []models.Constraint{
+						{Name: pkName, Type: models.PrimaryKey, Columns: []string{"id"}},
+						{Name: ukName, Type: models.Unique, Columns: []string{"email"}},
+						{Name: ckName, Type: models.Check, Columns: []string{"id"}, CheckExpression: "id > 0"},
+					},
+				},
+			},
+		}
+	}
+
+	h1, err := hasher.GenerateFingerprint(mk("SYS_C001", "SYS_C002", "ck_id"))
+	if err != nil {
+		t.Fatalf("fingerprint 1: %v", err)
+	}
+	h2, err := hasher.GenerateFingerprint(mk("SYS_C999", "SYS_C998", "ck_id"))
+	if err != nil {
+		t.Fatalf("fingerprint 2: %v", err)
+	}
+
+	if h1 != h2 {
+		t.Errorf("fingerprint changed when only constraint names differ:\n  %s\n  %s", h1, h2)
+	}
+}
+
+// Changing a CHECK expression must change the fingerprint (guard against
+// over-suppression hiding real drift).
+func TestFingerprintDetectsCheckExpressionChange(t *testing.T) {
+	hasher := NewHasher()
+
+	mk := func(expr string) *models.Schema {
+		return &models.Schema{
+			Name:         "test",
+			DatabaseType: models.PostgreSQL,
+			Tables: []models.Table{
+				{
+					Name:    "orders",
+					Columns: []models.Column{{Name: "total", DataType: "numeric", IsNullable: false}},
+					Constraints: []models.Constraint{
+						{Name: "orders_total_check", Type: models.Check, CheckExpression: expr},
+					},
+				},
+			},
+		}
+	}
+
+	h1, _ := hasher.GenerateFingerprint(mk("total >= 0"))
+	h2, _ := hasher.GenerateFingerprint(mk("total > 0"))
+	if h1 == h2 {
+		t.Errorf("fingerprint did not change when CHECK expression changed")
 	}
 }

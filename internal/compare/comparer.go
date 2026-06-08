@@ -3,6 +3,7 @@ package compare
 import (
 	"github.com/nechja/schemalyzer/pkg/models"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 )
@@ -232,26 +233,54 @@ func (c *Comparer) stringPointersEqual(a, b *string) bool {
 	return *a == *b
 }
 
+// constraintMatchKey returns the key used to pair a source constraint with its
+// target counterpart. Primary keys (one per table), unique constraints, and
+// foreign keys are matched structurally so that system-generated names
+// (PostgreSQL OID-based, Oracle SYS_C*) don't make identical constraints look
+// removed-and-added; constraintsEqual still flags any real difference (e.g. a
+// changed ON DELETE rule) as MODIFIED. CHECK constraints keep name matching:
+// they have no clean structural key (the expression is the payload, so keying on
+// it would turn a modified check into remove+add), which means an *unnamed*
+// CHECK whose name is system-generated remains a known residual source of churn.
+func constraintMatchKey(c *models.Constraint) string {
+	sortedJoin := func(in []string) string {
+		out := make([]string, len(in))
+		copy(out, in)
+		sort.Strings(out)
+		return strings.Join(out, ",")
+	}
+	switch c.Type {
+	case models.PrimaryKey:
+		return "PK"
+	case models.Unique:
+		return "U:" + sortedJoin(c.Columns)
+	case models.ForeignKey:
+		return "FK:" + sortedJoin(c.Columns) + "->" + c.ReferencedTable + ":" + sortedJoin(c.ReferencedColumn)
+	default:
+		return "N:" + c.Name
+	}
+}
+
 func (c *Comparer) compareConstraints(tableName string, source, target []models.Constraint) []models.Difference {
 	var differences []models.Difference
 
 	sourceMap := make(map[string]*models.Constraint)
 	for i := range source {
-		sourceMap[source[i].Name] = &source[i]
+		sourceMap[constraintMatchKey(&source[i])] = &source[i]
 	}
 
 	targetMap := make(map[string]*models.Constraint)
 	for i := range target {
-		targetMap[target[i].Name] = &target[i]
+		targetMap[constraintMatchKey(&target[i])] = &target[i]
 	}
 
 	// Check for removed constraints
-	for name, constraint := range sourceMap {
-		if _, exists := targetMap[name]; !exists {
+	for key, constraint := range sourceMap {
+		if _, exists := targetMap[key]; !exists {
 			differences = append(differences, models.Difference{
 				Type:        models.Removed,
 				ObjectType:  "Constraint",
-				ObjectName:  tableName + "." + name,
+				ObjectName:  tableName + "." + constraint.Name,
 				Source:      constraint,
 				Description: "Constraint removed from table",
 			})
@@ -259,12 +288,12 @@ func (c *Comparer) compareConstraints(tableName string, source, target []models.
 	}
 
 	// Check for added constraints
-	for name, constraint := range targetMap {
-		if _, exists := sourceMap[name]; !exists {
+	for key, constraint := range targetMap {
+		if _, exists := sourceMap[key]; !exists {
 			differences = append(differences, models.Difference{
 				Type:        models.Added,
 				ObjectType:  "Constraint",
-				ObjectName:  tableName + "." + name,
+				ObjectName:  tableName + "." + constraint.Name,
 				Target:      constraint,
 				Description: "Constraint added to table",
 			})
@@ -272,13 +301,13 @@ func (c *Comparer) compareConstraints(tableName string, source, target []models.
 	}
 
 	// Check for modified constraints
-	for name, sourceConstraint := range sourceMap {
-		if targetConstraint, exists := targetMap[name]; exists {
+	for key, sourceConstraint := range sourceMap {
+		if targetConstraint, exists := targetMap[key]; exists {
 			if !c.constraintsEqual(sourceConstraint, targetConstraint) {
 				differences = append(differences, models.Difference{
 					Type:        models.Modified,
 					ObjectType:  "Constraint",
-					ObjectName:  tableName + "." + name,
+					ObjectName:  tableName + "." + sourceConstraint.Name,
 					Source:      sourceConstraint,
 					Target:      targetConstraint,
 					Description: "Constraint definition changed",

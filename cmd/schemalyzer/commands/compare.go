@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	
+
 	"github.com/nechja/schemalyzer/internal/compare"
 	"github.com/nechja/schemalyzer/internal/output"
 	"github.com/nechja/schemalyzer/pkg/models"
@@ -12,20 +12,20 @@ import (
 )
 
 var (
-	sourceType   string
-	sourceConn   string
-	sourceSchema string
-	targetType   string
-	targetConn   string
-	targetSchema string
-	outputFormat string
-	outputFile   string
+	sourceType     string
+	sourceConn     string
+	sourceSchema   string
+	targetType     string
+	targetConn     string
+	targetSchema   string
+	outputFormat   string
+	outputFile     string
 	ignorePatterns []string
-	tablesOnly   bool
-	withStats    bool
-	withRowCount bool
-	withSamples  bool
-	sampleSize   int
+	tablesOnly     bool
+	withStats      bool
+	withRowCount   bool
+	withSamples    bool
+	sampleSize     int
 )
 
 var compareCmd = &cobra.Command{
@@ -46,7 +46,7 @@ func init() {
 	compareCmd.Flags().StringVar(&outputFile, "output", "", "Output file path (default: stdout)")
 	compareCmd.Flags().StringSliceVar(&ignorePatterns, "ignore", []string{}, "Ignore patterns (e.g., 'table:temp_*', 'constraint:SYS_*', '*_audit')")
 	compareCmd.Flags().BoolVar(&tablesOnly, "tables-only", false, "Compare only tables and their structure (no procedures, functions, triggers)")
-	
+
 	_ = compareCmd.MarkFlagRequired("source-type")
 	_ = compareCmd.MarkFlagRequired("source-conn")
 	_ = compareCmd.MarkFlagRequired("source-schema")
@@ -57,54 +57,54 @@ func init() {
 
 func runCompare(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
-	
+
 	// Create source reader
 	sourceReader, err := createReader(sourceType)
 	if err != nil {
 		return fmt.Errorf("failed to create source reader: %w", err)
 	}
 	defer sourceReader.Close()
-	
+
 	// Connect to source
 	if err := sourceReader.Connect(ctx, sourceConn); err != nil {
 		return fmt.Errorf("failed to connect to source database: %w", err)
 	}
-	
+
 	// Get source schema
 	fmt.Fprintf(os.Stderr, "Reading source schema: %s\n", sourceSchema)
 	sourceSchemaData, err := sourceReader.GetSchema(ctx, sourceSchema)
 	if err != nil {
 		return fmt.Errorf("failed to read source schema: %w", err)
 	}
-	
+
 	// Create target reader
 	targetReader, err := createReader(targetType)
 	if err != nil {
 		return fmt.Errorf("failed to create target reader: %w", err)
 	}
 	defer targetReader.Close()
-	
+
 	// Connect to target
 	if err := targetReader.Connect(ctx, targetConn); err != nil {
 		return fmt.Errorf("failed to connect to target database: %w", err)
 	}
-	
+
 	// Get target schema
 	fmt.Fprintf(os.Stderr, "Reading target schema: %s\n", targetSchema)
 	targetSchemaData, err := targetReader.GetSchema(ctx, targetSchema)
 	if err != nil {
 		return fmt.Errorf("failed to read target schema: %w", err)
 	}
-	
+
 	// Filter schemas if --tables-only is set
 	if tablesOnly {
 		sourceSchemaData = filterTablesOnly(sourceSchemaData)
 		targetSchemaData = filterTablesOnly(targetSchemaData)
 	}
-	
+
 	// Compare schemas
 	fmt.Fprintf(os.Stderr, "Comparing schemas...\n")
-	
+
 	var comparer *compare.Comparer
 	if len(ignorePatterns) > 0 {
 		ignoreConfig, err := models.NewIgnoreConfig(ignorePatterns)
@@ -115,18 +115,18 @@ func runCompare(cmd *cobra.Command, args []string) error {
 	} else {
 		comparer = compare.NewComparer()
 	}
-	
+
 	result := comparer.Compare(sourceSchemaData, targetSchemaData)
 	result.SourceDatabase = fmt.Sprintf("%s://%s", sourceType, sourceSchema)
 	result.TargetDatabase = fmt.Sprintf("%s://%s", targetType, targetSchema)
-	
+
 	// Format output
 	formatter := output.NewFormatter(output.OutputFormat(outputFormat))
 	outputData, err := formatter.Format(result)
 	if err != nil {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
-	
+
 	// Write output
 	if outputFile != "" {
 		if err := os.WriteFile(outputFile, outputData, 0644); err != nil {
@@ -136,7 +136,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Print(string(outputData))
 	}
-	
+
 	// Exit with code 2 if differences found (informational, not an error)
 	if len(result.Differences) > 0 {
 		fmt.Fprintf(os.Stderr, "Found %d differences between schemas\n", len(result.Differences))

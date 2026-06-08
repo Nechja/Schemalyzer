@@ -370,3 +370,82 @@ func TestComparer_Compare_Views(t *testing.T) {
 	assert.Equal(t, "View", result.Differences[0].ObjectType)
 	assert.Equal(t, "user_summary", result.Differences[0].ObjectName)
 }
+
+// helper: a table with the given constraints, single id column.
+func tableWithConstraints(cs []models.Constraint) models.Table {
+	return models.Table{
+		Name:        "orders",
+		Schema:      "test",
+		Columns:     []models.Column{{Name: "id", DataType: "integer"}, {Name: "email", DataType: "varchar(255)"}},
+		Constraints: cs,
+	}
+}
+
+// System-generated PK/UNIQUE/FK names (Oracle SYS_C*, Postgres OID-based) differ
+// between structurally-identical schemas. They must not show as remove+add.
+func TestComparer_Compare_SystemNamedConstraintsNoNoise(t *testing.T) {
+	comparer := NewComparer()
+
+	source := &models.Schema{Name: "a", DatabaseType: models.Oracle, Tables: []models.Table{
+		tableWithConstraints([]models.Constraint{
+			{Name: "SYS_C001", Type: models.PrimaryKey, Columns: []string{"id"}},
+			{Name: "SYS_C002", Type: models.Unique, Columns: []string{"email"}},
+			{Name: "SYS_C003", Type: models.ForeignKey, Columns: []string{"cust_id"}, ReferencedTable: "customers", ReferencedColumn: []string{"id"}},
+		}),
+	}}
+	target := &models.Schema{Name: "b", DatabaseType: models.Oracle, Tables: []models.Table{
+		tableWithConstraints([]models.Constraint{
+			{Name: "SYS_C999", Type: models.PrimaryKey, Columns: []string{"id"}},
+			{Name: "SYS_C998", Type: models.Unique, Columns: []string{"email"}},
+			{Name: "SYS_C997", Type: models.ForeignKey, Columns: []string{"cust_id"}, ReferencedTable: "customers", ReferencedColumn: []string{"id"}},
+		}),
+	}}
+
+	result := comparer.Compare(source, target)
+	assert.Equal(t, 0, len(result.Differences), "system-named PK/UNIQUE/FK with identical structure should produce no diff")
+}
+
+// A changed CHECK expression must remain a single MODIFIED, not remove+add.
+func TestComparer_Compare_ModifiedCheckStaysSingle(t *testing.T) {
+	comparer := NewComparer()
+
+	source := &models.Schema{Name: "a", DatabaseType: models.PostgreSQL, Tables: []models.Table{
+		tableWithConstraints([]models.Constraint{
+			{Name: "orders_total_check", Type: models.Check, CheckExpression: "total >= 0"},
+		}),
+	}}
+	target := &models.Schema{Name: "b", DatabaseType: models.PostgreSQL, Tables: []models.Table{
+		tableWithConstraints([]models.Constraint{
+			{Name: "orders_total_check", Type: models.Check, CheckExpression: "total > 0"},
+		}),
+	}}
+
+	result := comparer.Compare(source, target)
+	assert.Equal(t, 1, len(result.Differences))
+	assert.Equal(t, models.Modified, result.Differences[0].Type)
+	assert.Equal(t, "Constraint", result.Differences[0].ObjectType)
+}
+
+// FKs are matched structurally (system names ignored), but a real change such as
+// a different ON DELETE rule must still surface as a single MODIFIED.
+func TestComparer_Compare_ModifiedForeignKeyStaysSingle(t *testing.T) {
+	comparer := NewComparer()
+
+	fk := func(name, onDelete string) models.Constraint {
+		return models.Constraint{
+			Name: name, Type: models.ForeignKey, Columns: []string{"cust_id"},
+			ReferencedTable: "customers", ReferencedColumn: []string{"id"}, OnDelete: onDelete,
+		}
+	}
+	source := &models.Schema{Name: "a", DatabaseType: models.Oracle, Tables: []models.Table{
+		tableWithConstraints([]models.Constraint{fk("SYS_C001", "NO ACTION")}),
+	}}
+	target := &models.Schema{Name: "b", DatabaseType: models.Oracle, Tables: []models.Table{
+		tableWithConstraints([]models.Constraint{fk("SYS_C999", "CASCADE")}),
+	}}
+
+	result := comparer.Compare(source, target)
+	assert.Equal(t, 1, len(result.Differences))
+	assert.Equal(t, models.Modified, result.Differences[0].Type)
+	assert.Equal(t, "Constraint", result.Differences[0].ObjectType)
+}

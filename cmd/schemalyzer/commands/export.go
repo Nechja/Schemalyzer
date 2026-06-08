@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	
+
 	"github.com/nechja/schemalyzer/internal/schema"
 	"github.com/spf13/cobra"
 )

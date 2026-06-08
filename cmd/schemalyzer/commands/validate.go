@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	
+
 	"github.com/nechja/schemalyzer/internal/compare"
 	"github.com/nechja/schemalyzer/internal/schema"
 	"github.com/nechja/schemalyzer/pkg/models"
@@ -19,9 +19,9 @@ var (
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate database schema against a golden file",
-	Long:  `Validate database schema against a golden JSON/YAML file.
+	Long: `Validate database schema against a golden JSON/YAML file.
 Perfect for CI/CD pipelines - returns exit code 0 if schemas match, 2 if they differ.`,
-	RunE:  runValidate,
+	RunE: runValidate,
 }
 
 func init() {
@@ -39,32 +39,32 @@ func init() {
 
 func runValidate(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
-	
+
 	// Load golden schema from file
 	loader := schema.NewLoader()
 	goldenSchema, err := loader.LoadFromFile(goldenFile)
 	if err != nil {
 		return fmt.Errorf("failed to load golden schema: %w", err)
 	}
-	
+
 	// Create reader for current database
 	reader, err := createReader(sourceType)
 	if err != nil {
 		return fmt.Errorf("failed to create reader: %w", err)
 	}
 	defer reader.Close()
-	
+
 	// Connect to database
 	if err := reader.Connect(ctx, sourceConn); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	
+
 	// Get current schema
 	currentSchema, err := reader.GetSchema(ctx, sourceSchema)
 	if err != nil {
 		return fmt.Errorf("failed to read schema: %w", err)
 	}
-	
+
 	// Compare schemas
 	var comparer *compare.Comparer
 	if len(ignorePatterns) > 0 {
@@ -76,9 +76,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	} else {
 		comparer = compare.NewComparer()
 	}
-	
+
 	result := comparer.Compare(goldenSchema, currentSchema)
-	
+
 	// In pipeline mode, only output if there are differences
 	if pipelineMode {
 		if len(result.Differences) > 0 {
@@ -88,21 +88,21 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		// Success - no output
 		return nil
 	}
-	
+
 	// Normal mode - output results
 	if len(result.Differences) == 0 {
 		fmt.Println("✓ Schema matches golden file")
 		return nil
 	}
-	
+
 	// Output differences
 	fmt.Printf("✗ Schema validation failed - %d differences found:\n\n", len(result.Differences))
-	
+
 	// Group by type
 	added := []models.Difference{}
 	removed := []models.Difference{}
 	modified := []models.Difference{}
-	
+
 	for _, diff := range result.Differences {
 		switch diff.Type {
 		case models.Added:
@@ -113,7 +113,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			modified = append(modified, diff)
 		}
 	}
-	
+
 	// Output grouped differences
 	if len(removed) > 0 {
 		fmt.Println("Missing from current schema:")
@@ -122,7 +122,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println()
 	}
-	
+
 	if len(added) > 0 {
 		fmt.Println("Extra in current schema:")
 		for _, diff := range added {
@@ -130,7 +130,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println()
 	}
-	
+
 	if len(modified) > 0 {
 		fmt.Println("Modified in current schema:")
 		for _, diff := range modified {
