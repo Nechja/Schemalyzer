@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/nechja/schemalyzer/pkg/models"
 )
@@ -112,21 +113,26 @@ func (h *Hasher) normalizeColumns(columns []models.Column) []map[string]interfac
 }
 
 func (h *Hasher) normalizeConstraints(constraints []models.Constraint) []map[string]interface{} {
-	sort.Slice(constraints, func(i, j int) bool {
-		return constraints[i].Name < constraints[j].Name
-	})
+	// Hash constraints by their semantic content rather than name. Constraint
+	// names are frequently system-generated (PostgreSQL OID-based, Oracle SYS_C*)
+	// and differ between structurally-identical schemas, so including them would
+	// make a schema's fingerprint unstable across environments. The trade-off is
+	// that a pure rename (same definition, new name) is not treated as drift.
+	type entry struct {
+		sig  string
+		data map[string]interface{}
+	}
 
-	var result []map[string]interface{}
+	entries := make([]entry, 0, len(constraints))
 	for _, c := range constraints {
 		normalized := map[string]interface{}{
-			"name": c.Name,
 			"type": c.Type,
 		}
 
-		if len(c.Columns) > 0 {
-			cols := make([]string, len(c.Columns))
-			copy(cols, c.Columns)
-			sort.Strings(cols)
+		cols := make([]string, len(c.Columns))
+		copy(cols, c.Columns)
+		sort.Strings(cols)
+		if len(cols) > 0 {
 			normalized["columns"] = cols
 		}
 
@@ -134,10 +140,10 @@ func (h *Hasher) normalizeConstraints(constraints []models.Constraint) []map[str
 			normalized["ref_table"] = c.ReferencedTable
 		}
 
-		if len(c.ReferencedColumn) > 0 {
-			refCols := make([]string, len(c.ReferencedColumn))
-			copy(refCols, c.ReferencedColumn)
-			sort.Strings(refCols)
+		refCols := make([]string, len(c.ReferencedColumn))
+		copy(refCols, c.ReferencedColumn)
+		sort.Strings(refCols)
+		if len(refCols) > 0 {
 			normalized["ref_columns"] = refCols
 		}
 
@@ -152,7 +158,19 @@ func (h *Hasher) normalizeConstraints(constraints []models.Constraint) []map[str
 			normalized["check_expr"] = c.CheckExpression
 		}
 
-		result = append(result, normalized)
+		sig := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s",
+			c.Type, strings.Join(cols, ","), c.ReferencedTable,
+			strings.Join(refCols, ","), c.OnUpdate, c.OnDelete, c.CheckExpression)
+		entries = append(entries, entry{sig: sig, data: normalized})
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].sig < entries[j].sig
+	})
+
+	result := make([]map[string]interface{}, 0, len(entries))
+	for _, e := range entries {
+		result = append(result, e.data)
 	}
 
 	return result

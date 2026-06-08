@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"regexp"
+	"strings"
+	"time"
+)
 
 type DatabaseType string
 
@@ -66,6 +70,26 @@ const (
 	Check      ConstraintType = "CHECK"
 	NotNull    ConstraintType = "NOT_NULL"
 )
+
+// notNullCheckRe matches a CHECK expression that only enforces NOT NULL on a
+// single column, e.g. `total IS NOT NULL` (PostgreSQL) or `"TOTAL" IS NOT NULL`
+// (Oracle). The optional quotes and surrounding parentheses cover both engines.
+var notNullCheckRe = regexp.MustCompile(`(?i)^\(?\s*"?[\w$#]+"?\s+is\s+not\s+null\s*\)?$`)
+
+// IsNotNullCheck reports whether the constraint is just a NOT NULL enforcement.
+// Both PostgreSQL and Oracle expose column NOT NULL as a system-named CHECK
+// constraint, which is redundant with Column.IsNullable and carries an unstable
+// (OID-/SYS_C-derived) name. Callers drop these so comparisons and fingerprints
+// don't churn on names that have no schema-design meaning.
+func (c Constraint) IsNotNullCheck() bool {
+	if c.Type == NotNull {
+		return true
+	}
+	if c.Type != Check {
+		return false
+	}
+	return notNullCheckRe.MatchString(strings.TrimSpace(c.CheckExpression))
+}
 
 type Index struct {
 	Name      string

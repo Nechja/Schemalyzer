@@ -232,7 +232,8 @@ func (r *OracleReader) getColumns(ctx context.Context, schemaName, tableName str
 			c.nullable,
 			c.data_default,
 			c.column_id,
-			cc.comments
+			cc.comments,
+			c.identity_column
 		FROM all_tab_columns c
 		LEFT JOIN all_col_comments cc ON c.owner = cc.owner AND c.table_name = cc.table_name AND c.column_name = cc.column_name
 		WHERE c.owner = :1 AND c.table_name = :2
@@ -249,13 +250,19 @@ func (r *OracleReader) getColumns(ctx context.Context, schemaName, tableName str
 		var col models.Column
 		var nullable string
 		var defaultValue, comment sql.NullString
+		var identity string
 
-		if err := rows.Scan(&col.Name, &col.DataType, &nullable, &defaultValue, &col.Position, &comment); err != nil {
+		if err := rows.Scan(&col.Name, &col.DataType, &nullable, &defaultValue, &col.Position, &comment, &identity); err != nil {
 			return nil, err
 		}
 
 		col.IsNullable = nullable == "Y"
-		if defaultValue.Valid {
+		col.IsAutoIncrement = identity == "YES"
+		// For identity columns the data_default is a system-generated
+		// "OWNER"."ISEQ$$_<n>".nextval expression whose sequence number differs
+		// between databases. Identity-ness is captured by IsAutoIncrement, so
+		// drop the unstable default to keep comparisons/fingerprints stable.
+		if defaultValue.Valid && !col.IsAutoIncrement {
 			def := strings.TrimSpace(defaultValue.String)
 			col.DefaultValue = &def
 		}
@@ -383,6 +390,10 @@ func (r *OracleReader) getConstraints(ctx context.Context, schemaName, tableName
 
 	var constraints []models.Constraint
 	for _, constraint := range constraintMap {
+		// Skip synthetic NOT NULL checks; nullability is captured on the column.
+		if constraint.IsNotNullCheck() {
+			continue
+		}
 		constraints = append(constraints, *constraint)
 	}
 
@@ -398,10 +409,10 @@ func (r *OracleReader) getIndexes(ctx context.Context, schemaName, tableName str
 		FROM all_indexes i
 		WHERE i.owner = :1 AND i.table_name = :2
 		AND NOT EXISTS (
-			SELECT 1 FROM all_constraints c 
-			WHERE c.owner = i.owner 
-			AND c.constraint_name = i.index_name 
-			AND c.constraint_type = 'P'
+			SELECT 1 FROM all_constraints c
+			WHERE c.owner = i.owner
+			AND c.constraint_name = i.index_name
+			AND c.constraint_type IN ('P', 'U')
 		)
 		ORDER BY i.index_name`
 
@@ -562,6 +573,13 @@ func (r *OracleReader) getSequences(ctx context.Context, schemaName string) ([]m
 		if err := rows.Scan(&seq.Name, &minValueStr, &maxValueStr,
 			&seq.Increment, &cycleFlag, &seq.CurrentValue); err != nil {
 			return nil, err
+		}
+
+		// Skip system-generated identity sequences (ISEQ$$_<n>). They back
+		// IDENTITY columns, which are captured via Column.IsAutoIncrement, and
+		// their generated names/numbers differ between databases.
+		if strings.HasPrefix(seq.Name, "ISEQ$$") {
+			continue
 		}
 
 		// Handle Oracle's large numeric values

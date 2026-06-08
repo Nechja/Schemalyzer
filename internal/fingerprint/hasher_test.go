@@ -346,3 +346,73 @@ func TestFingerprintParameterOrderIndependence(t *testing.T) {
 		t.Error("Functions with different parameter order should produce same fingerprint")
 	}
 }
+
+// Constraint names are often system-generated (Oracle SYS_C*, Postgres
+// OID-based) and differ between structurally-identical schemas. The fingerprint
+// must depend on constraint content, not names, so it stays stable across
+// environments.
+func TestFingerprintStableAcrossConstraintNames(t *testing.T) {
+	hasher := NewHasher()
+
+	mk := func(pkName, ukName, ckName string) *models.Schema {
+		return &models.Schema{
+			Name:         "test",
+			DatabaseType: models.Oracle,
+			Tables: []models.Table{
+				{
+					Name: "orders",
+					Columns: []models.Column{
+						{Name: "id", DataType: "integer", IsNullable: false},
+						{Name: "email", DataType: "varchar(255)", IsNullable: false},
+					},
+					Constraints: []models.Constraint{
+						{Name: pkName, Type: models.PrimaryKey, Columns: []string{"id"}},
+						{Name: ukName, Type: models.Unique, Columns: []string{"email"}},
+						{Name: ckName, Type: models.Check, Columns: []string{"id"}, CheckExpression: "id > 0"},
+					},
+				},
+			},
+		}
+	}
+
+	h1, err := hasher.GenerateFingerprint(mk("SYS_C001", "SYS_C002", "ck_id"))
+	if err != nil {
+		t.Fatalf("fingerprint 1: %v", err)
+	}
+	h2, err := hasher.GenerateFingerprint(mk("SYS_C999", "SYS_C998", "ck_id"))
+	if err != nil {
+		t.Fatalf("fingerprint 2: %v", err)
+	}
+
+	if h1 != h2 {
+		t.Errorf("fingerprint changed when only constraint names differ:\n  %s\n  %s", h1, h2)
+	}
+}
+
+// Changing a CHECK expression must change the fingerprint (guard against
+// over-suppression hiding real drift).
+func TestFingerprintDetectsCheckExpressionChange(t *testing.T) {
+	hasher := NewHasher()
+
+	mk := func(expr string) *models.Schema {
+		return &models.Schema{
+			Name:         "test",
+			DatabaseType: models.PostgreSQL,
+			Tables: []models.Table{
+				{
+					Name:    "orders",
+					Columns: []models.Column{{Name: "total", DataType: "numeric", IsNullable: false}},
+					Constraints: []models.Constraint{
+						{Name: "orders_total_check", Type: models.Check, CheckExpression: expr},
+					},
+				},
+			},
+		}
+	}
+
+	h1, _ := hasher.GenerateFingerprint(mk("total >= 0"))
+	h2, _ := hasher.GenerateFingerprint(mk("total > 0"))
+	if h1 == h2 {
+		t.Errorf("fingerprint did not change when CHECK expression changed")
+	}
+}
