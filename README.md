@@ -110,10 +110,10 @@ oracle://username:password@host:port/service_name
 
 Generate a SHA256 hash of a database schema for quick comparison and change detection.
 
-> ** Breaking change (this release): fingerprint values have changed.**
+> **Breaking change (v0.80.0): fingerprint values have changed.**
 > Fingerprints and comparisons now ignore system-generated object names that vary
 > between databases PostgreSQL OID-based / Oracle `SYS_C*` constraint names,
-> Oracle `ISEQ$$_*` identity sequences, and constraint-backing indexes — and no
+> Oracle `ISEQ$$_*` identity sequences, and constraint-backing indexes and no
 > longer treat a column's `NOT NULL` as a separate CHECK constraint (nullability
 > is compared on the column instead). This makes a fingerprint stable across
 > environments for a structurally-identical schema, but
